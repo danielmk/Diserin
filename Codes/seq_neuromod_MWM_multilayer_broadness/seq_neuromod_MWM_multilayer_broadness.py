@@ -19,72 +19,29 @@ import psutil
 import pdb
 import sys
 
+from parameters import *
+
 def main():
+
     parser = OptionParser()
+
     parser.add_option("-o", "--output", dest="jobID",
-                  help="ID of the JOB", metavar="FILE", default="multilayer_test_off")
+                      help="ID of the JOB", metavar="FILE", default="multilayer_test_off")
     parser.add_option("-e", "--episodes", dest="episodes",
-          help="Runs to be performed", metavar="int", default=1)
-    parser.add_option("-c", "--changeposition", dest="changepos",
-          help="Change the postion of reward", default=False, action='store_true')
+                      help="Runs to be performed", metavar="int", default=1)
     parser.add_option("-t", "--trials", dest="trials",
-      help="Number of trials", metavar="int",default=30)
-    parser.add_option("-s", "--serotonin", dest="serotonin",
-      help="Activate serotonergic system", default=True, action='store_true')
+                      help="Number of trials", metavar="int",default=30)
+
     parser.add_option("-p", "--plot", dest="plot",
-      help="Plotting", default=True, action='store_true')
-    parser.add_option("-q", "--ca3", dest="ca3_scale",
-      help="To what extent does CA1 receive CA3 input?", default=0.1)
-    parser.add_option("-d", "--dlr", dest="eta_DA",
-                  help="Learning rate for dopamine", metavar="float", default=0.01)
-    parser.add_option("-l", "--slr", dest="eta_Sero",
-                  help="Learning rate for serotonin", metavar="float", default=0.01)
-    parser.add_option("-m", "--adop", dest="A_Dopa",
-                  help="STDP magnitude of dopamine", metavar="float", default=1)
-    parser.add_option("-n", "--asero", dest="A_Sero",
-                  help="STDP magnitude of serotonin", metavar="float", default=1)
-    parser.add_option("-a", "--activ", dest="Activ",
-                  help="Cyclic serotonin potentiation", default=False, action='store_true')
-    parser.add_option("-i", "--inhib", dest="Inhib",
-                  help="Cyclic serotonin inhibition", default=False, action='store_true')
-    parser.add_option("-g", "--htime", dest="TSero",
-                  help="Time constant for the STDP window of serotonin", metavar="float", default=10)
-    parser.add_option("-j", "--jtime", dest="TDA",
-                  help="Time constant for the STDP window of dopamine", metavar="float", default=10)
-    parser.add_option("--offset", dest="offset",
-                  help="Wheter using the offset in CA1 place cells", default=True)
+                      help="Plotting", default=True, action='store_true')
     
     
     options, args = parser.parse_args()
+
     jobID = options.jobID
     plot_flag = options.plot
     episodes = int(options.episodes)
-    Trials = int(options.trials) #number of trials
-    changepos=options.changepos
-    Sero=options.serotonin
-    #learning rates
-    eta_DA=float(options.eta_DA) #learning rate eligibility trace for dopamine
-    eta_Sero=float(options.eta_Sero) #learning rate eligibility trace for serotonin
-    #magnitudes of neuromodulation
-    A_DA=float(options.A_Dopa)
-    A_Sero=float(options.A_Sero)
-    #activation and inhibition of serotonergic pathway
-    Activ=options.Activ
-    Inhib=options.Inhib
-    #Time constants for STDP window
-    tau_DA=options.TDA #time constant pre-post window
-    tau_Sero=options.TSero   #time constant post-pre window for serotonin
-    ca3_scale = options.ca3_scale 
-    offset_flag = options.offset
-    
-
-    if plot_flag:
-        plt.close()
-
-    # if episodes==1:
-
-    #     episode_run(jobID,1,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,)
-    # else:
+    Trials = int(options.trials) #number of trials    
 
     results=[]
 
@@ -93,7 +50,7 @@ def main():
         print('Episode',episode)
         # results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,),error_callback=log_e))
         results.append(episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,
-                                   A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_flag))
+                                   A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset))
         # ca1_spikes = episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,)
         # return ca1_spikes
 
@@ -102,6 +59,7 @@ def main():
 
     with open(jobID+'.pickle', 'wb') as myfile:
         pickle.dump((descriptor,results), myfile)
+
     return results
 
 def log_e(e):
@@ -127,23 +85,14 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     rew1_flag=1  #rewards are in the initial positions
     rew2_flag=0  #reward are switched
     ACh_flag=0 #acetylcholine flag if required for comparisons
-    step = 1
-    T_max = 15*10**3 #maximum time trial
-    starting_position = np.array([0,0]) #starting position
+    
     t_rew = T_max #time of reward - initialized to maximum
-    t_extreme = t_rew+300 #time of reward - initialized to maximu
+    t_extreme = t_rew + delay_post_reward #time of reward - initialized to maximu
     t_end = T_max
-    c = np.array([-1.5,-1.5]) #centre reward 1
-    r_goal=0.3 #radius goal area
-    c2 = np.array([1.5,1.5]) #centre reward 2
-    r_goal2=0.3 #radius goal area2
 
     ## Place cells positions
-    space_pc = 0.4 #place cells separation distance
-    bounds_x = np.array([-2,2]) #bounds open field, x axis
-    bounds_y = np.array([-2,2]) #bounds open field, y axis
 
-    if offset_flag:
+    if offset:
         x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
         y_pc = np.round(np.arange(bounds_y[0], bounds_y[1], space_pc)+space_pc/2,2)
     else:
@@ -156,31 +105,10 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     xx, yy = np.meshgrid(x_pc,y_pc)
     pc = np.stack([xx,yy], axis=2).reshape(-1,2)
-
-    """Place cell parameters"""
     N_pc=pc.shape[0] #number of place cells
-    rho_pc=400*10**(-3) #maximum firing rate place cells, according to Poisson
-    sigma_pc=0.4 #pc separation distance
-
-    """Action neuron parameters"""
-    eps0 = 20 #scaling constant epsp
-    tau_m = 20 #membrane time constant
-    tau_s = 5 #synaptic time rise epsp
-    chi = -5 #scaling constant refractory effect
-    rho0 = 60*10**(-3) #scaling rate
-    theta = 16 #threshold
-    delta_u = 2 #escape noise
-    N_action = 40 #number action neurons
-
-    #action selection
-    tau_gamma = 50 #raise time convolution action selection
-    v_gamma = 20 #decay time convolution action selection
-    theta_actor = np.reshape(2*np.pi*np.arange(1,N_action+1)/N_action,(40,1)) #angles actions
-
+    
     #winner-take-all weights
-    psi = 20#the higher, the more narrow the range of excitation
-    w_minus = -300 * 2
-    w_plus = 100
+    theta_actor = np.reshape(2*np.pi*np.arange(1,N_action+1)/N_action,(40,1)) #angles actions
     diff_theta = np.matlib.repmat(theta_actor.T,N_action,1) - np.matlib.repmat(theta_actor,1, N_action)
     f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
     f = f - np.multiply(f,np.eye(N_action))
@@ -188,34 +116,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     w_lateral = (w_minus/N_action+w_plus*f/normalised) #lateral connectivity action neurons
 
     #actions
-    a0=.08
     actions = np.squeeze(a0*np.array([np.sin(theta_actor),np.cos(theta_actor)])) #possible actions (x,y)
 
-    dx = 0.01 #length of bouncing back from walls
-
-
-    ## synaptic plasticity parameters for dopamine-regulated STDP
-
-    A_pre_post=A_DA   #amplitude pre-post window
-    A_post_pre=A_DA   #amplitude post-pre window
-    tau_pre_post= tau_DA   #time constant pre-post window
-    tau_post_pre= tau_DA   #time constant post-pre window
-    tau_e= 2*10**3 #time constant eligibility trace
-
-    ## synaptic plasticity parameters for serotonin-regulated STDP
-
-    A_pre_post_sero=A_Sero   #amplitude pre-post window for serotonin
-    A_post_pre_sero=0   #amplitude post-pre window for serotonin
-    tau_pre_post_sero= tau_Sero   #time constant pre-post window for serotonin
-    tau_post_pre_sero= tau_Sero   #time constant post-pre window for serotonin
-    tau_e_sero= 5*10**3 #time constant eligibility trace for serotonin
-
-    #ACh learning rate if active
-    eta_ACh = 10**-3*2 #learning rate acetylcholine
-
-    #feed-forward weights
-    w_max=3 #upper bound feed-forward proto-weights and weights
-    w_min=1 #.pwer bound feed-forward weights
+    # feedforward weights
     w_in = np.ones([N_pc, N_action]).T / 5 # initialization feed-forward weights
     w_in_ca1 = np.random.rand(N_pc, N_pc).T
 
@@ -289,7 +192,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         fig.show()
 
 
-
     ## delete actions that lead out of the maze
 
     #find index place cells that lie on the walls
@@ -314,7 +216,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
     # optogenetic ranges
     ranges = [(T_max*Trials/6,2*T_max*Trials/6), (3*T_max*Trials/6,4*T_max*Trials/6), (5*T_max*Trials/6,T_max*Trials)]
-    ## start simulation
+    
+    
+    ######## START SIMULATION ######################################
     w_tot_old = w_tot[0:N_action,0:N_pc] #store weights before start
     ca3_activities = []
     ca1_activities = []
@@ -494,7 +398,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                     if pos[1]>=bounds_y[1]:
                         pos = pos+dx*np.array([0,-1])
         #time when trial end is 300ms after reward is found
-        t_extreme = t_rew+300
+        t_extreme = t_rew+delay_post_reward
         if t> t_extreme and t<T_max:
             i = int((np.ceil(i/T_max))*T_max)-1 #set i counter to the end of the trial
             t_end = t_extreme #for plotting
@@ -559,22 +463,25 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                 f3.pop(0).remove()
                 f4.remove()
                 pos2.remove()
-                t_end = T_max;
+                t_end = T_max
         if old_tr != tr:
             activities['ca1'].append(ca1_activities)
             activities['ca3'].append(ca3_activities)
             activities['ac'].append(ac_activities)
         old_tr = tr
+
     activities['ca1'].append(ca1_activities)
     activities['ca3'].append(ca3_activities)
     activities['ac'].append(ac_activities)
 
     x_pos=store_pos[np.where(store_pos.any(axis=1))[0],0]
     y_pos=store_pos[np.where(store_pos.any(axis=1))[0],1]
+
     try:
         pos_hist=np.histogram2d(x_pos, y_pos, bins=(np.linspace(-2,2,50),np.linspace(-2,2,50)))[0]
     except:
         print(pos_hist.shape)
+
     return episode,first_reward,rewarding_trials,punishing_trials,quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,pos_hist, activities, w_ca1_initial, w_ca1
 
 if __name__ == '__main__':
