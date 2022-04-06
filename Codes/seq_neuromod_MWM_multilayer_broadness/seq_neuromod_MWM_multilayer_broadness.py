@@ -4,7 +4,6 @@
 import sys
 sys.path.extend(['../', './Codes/'])
 
-from optparse import OptionParser
 from numba import jit, cuda
 import numpy as np
 import matplotlib.pyplot as plt
@@ -25,38 +24,17 @@ from parameters import *
 
 def main():
 
-    parser = OptionParser()
-
-    parser.add_option("-o", "--output", dest="jobID",
-                      help="ID of the JOB", metavar="FILE", default="multilayer_test_off")
-    parser.add_option("-e", "--episodes", dest="episodes",
-                      help="Runs to be performed", metavar="int", default=1)
-    parser.add_option("-t", "--trials", dest="trials",
-                      help="Number of trials", metavar="int",default=30)
-
-    parser.add_option("-p", "--plot", dest="plot",
-                      help="Plotting", default=True, action='store_true')
-    
-    
-    options, args = parser.parse_args()
-
-    jobID = options.jobID
-    plot_flag = options.plot
-    episodes = int(options.episodes)
-    Trials = int(options.trials) #number of trials    
-
     results=[]
 
     for episode in range(0,episodes):
 
         print('Episode',episode)
         # results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,),error_callback=log_e))
-        results.append(episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,
+        results.append(episode_run(jobID,episode,plot_flag,trials,changepos,Sero,eta_DA,eta_Sero,
                                    A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset))
         # ca1_spikes = episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,)
         # return ca1_spikes
 
-    descriptor = {'jobID':jobID,'Trials':Trials,'episodes':episodes,'eta_DA':eta_DA,'eta_Sero':eta_Sero,'A_DA':A_DA,'A_Sero':A_Sero,'Activ':Activ,'Inhib':Inhib,'T_DA':tau_DA,'T_Sero':tau_Sero}
     # results_episode = [result.get() for result in results]
 
     with open(jobID+'.pickle', 'wb') as myfile:

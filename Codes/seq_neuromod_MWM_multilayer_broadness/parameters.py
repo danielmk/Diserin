@@ -1,6 +1,12 @@
 import numpy as np
 
-""" Options """
+builtin_variables = set(globals())
+
+""" Main options """
+jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
+episodes = 1 # (default 1)
+trials = 40 # (default 40)
+plot_flag = True
 changepos = False
 Sero = True
 Activ = False # Cyclic serotonin potentiation
@@ -82,3 +88,15 @@ ca3_scale = 0.1 # To what extent does CA1 receive CA3 input?
 ## Feed-forward weights parameters
 w_max=3 #upper bound feed-forward proto-weights and weights
 w_min=1 #.pwer bound feed-forward weights
+
+
+""" Dict with all previous parameters, for saving configuration """
+# collect all global variables in a dict
+descriptor = globals().copy()
+
+# remove builtin variables
+descriptor.pop('builtin_variables')
+for key in builtin_variables:
+    descriptor.pop(key)
+
+
