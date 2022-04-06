@@ -1,6 +1,9 @@
 """Received from Carlos as working baseline.
 """
 
+import sys
+sys.path.extend(['../', './Codes/'])
+
 from optparse import OptionParser
 from numba import jit, cuda
 import numpy as np
@@ -17,7 +20,6 @@ import multiprocessing
 import pickle
 import psutil
 import pdb
-import sys
 
 from parameters import *
 
