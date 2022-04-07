@@ -68,8 +68,10 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     # random number of each pool
     np.random.seed()
 
+    # flag to print first rewarding trial
+    ever_rewarded_flag = False
+
     #Results to be exported for each episode
-    first_reward = None
     rewarding_trials = np.zeros(Trials)
     punishing_trials = np.zeros(Trials)
     quadrant_map = np.zeros([Trials,4])
@@ -166,7 +168,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         plt.ion()
         #Plot of reward places and intial position
         reward_plot = ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
-        point_plot,= ax1.plot(starting_position[0],starting_position[1], 'r',marker='o',markersize=5) #plot initial starting point
+        ax1.plot(starting_position[0],starting_position[1], 'r',marker='o',markersize=5) #plot initial starting point
 
         #plot walls
         ax1.plot([bounds_x[0],bounds_x[1]], [bounds_y[1],bounds_y[1]],c='k', ls='--',lw=0.5)
@@ -258,8 +260,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             Canc = np.ones([N_pc+N_action,N_action]).T
             Canc_ca1 = np.ones([N_pc, N_pc])
             last_spike_post=np.zeros([N_action,1])-1000
-            trace_pre_pos= np.zeros([N_action, N_pc])
-            trace_post_pre= np.zeros([N_action,N_pc])
             trace_tot = np.zeros([N_action,N_pc])
             eligibility_trace = np.zeros([N_action, N_pc])
             w_ca1 = new_weight_buffer
@@ -304,7 +304,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         
         
         #sys.exit()
-        # store_pos[i-1,:] = pos #store position (for plotting)
+        store_pos[i-1,:] = pos #store position (for plotting)
 
         #save quadrant
         quadrant_map[tr-1, get_quadrant(pos[0], pos[1])] += 1
@@ -315,13 +315,16 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         ## reward
         # agent enters reward 1 in the first half of the trial
         if np.sum((pos-c)**2)<=r_goal**2 and rew_found==0 and rew1_flag==1:
+
             rew_found=1 #flag reward found (so that trial is ended soon)
             t_rew=t #time of reward
             time_reward[tr-1] = t #store time of reward
             rewarding_trials[tr-1:]+=1
-            if not(first_reward):
-                first_reward=tr
-                print('First reward,episode',episode,'trial',first_reward)
+            
+            if not ever_rewarded_flag:
+
+                ever_rewarded_flag = True
+                print('First reward,episode',episode,'trial', tr)
 
 
         #cases for location switching
@@ -475,7 +478,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     except:
         print(pos_hist.shape)
 
-    return episode,first_reward,rewarding_trials,punishing_trials,\
+    return episode, rewarding_trials,punishing_trials,\
            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
            pos_hist, activities, w_ca1_initial, w_ca1
 
