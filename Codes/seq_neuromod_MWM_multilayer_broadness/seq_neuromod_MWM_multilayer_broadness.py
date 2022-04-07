@@ -73,7 +73,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     #Results to be exported for each episode
     rewarding_trials = np.zeros(Trials)
-    punishing_trials = np.zeros(Trials)
     quadrant_map = np.zeros([Trials,4])
     median_distance = np.zeros(Trials)
     activities = {'ca3': [], 'ca1': [], 'ac': []}
@@ -310,16 +309,16 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         quadrant_map[tr-1, get_quadrant(pos[0], pos[1])] += 1
 
         # save median distance to centre
-        median_tr.append(np.linalg.norm(pos)/2)
+        median_tr.append(np.linalg.norm(pos))
 
         ## reward
         # agent enters reward 1 in the first half of the trial
-        if np.sum((pos-c)**2)<=r_goal**2 and rew_found==0 and rew1_flag==1:
+        if  rew_found==0 and rew1_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
 
             rew_found=1 #flag reward found (so that trial is ended soon)
             t_rew=t #time of reward
             time_reward[tr-1] = t #store time of reward
-            rewarding_trials[tr-1:]+=1
+            rewarding_trials[tr-1]+=1
             
             if not ever_rewarded_flag:
 
@@ -330,13 +329,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         #cases for location switching
 
         # agent enters reward 2 in the second half of the trial
-        if np.sum((pos-c2)**2)<=r_goal2**2 and rew_found==0 and rew2_flag==1:
+        elif rew_found==0 and rew2_flag==1 and np.sum((pos-c2)**2)<=r_goal2**2:
             rew_found=1  #flag reward 2 found (so that trial is ended soon)
             t_rew=t #time of reward 2
             time_reward2[tr-1] = t #store time of reward 2
-            rewarding_trials[tr-1:]+=1
+            rewarding_trials[tr-1]+=1
 
-        if np.sum((pos-c)**2)<=r_goal**2 and rew1_flag==0 and rew2_flag==1:
+        elif rew1_flag==0 and rew2_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
              #this location is no longer rewarded, so the trial is not ended
             time_reward_old[tr-1]=t #store time of entrance old reward location
 
@@ -425,7 +424,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
 
             ##save median_distance
-            median_distance[tr-1]=np.median(median_tr)
+            median_distance[tr-1] = np.median(median_tr)
             ## plot
 
             if plot_flag:
@@ -478,7 +477,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     except:
         print(pos_hist.shape)
 
-    return episode, rewarding_trials,punishing_trials,\
+    return episode, rewarding_trials,\
            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
            pos_hist, activities, w_ca1_initial, w_ca1
 
