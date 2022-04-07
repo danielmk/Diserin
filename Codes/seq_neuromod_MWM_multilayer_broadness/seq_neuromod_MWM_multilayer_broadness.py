@@ -137,9 +137,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     X_cut = np.zeros([N_pc+N_action, N_action])  #matrix of spikes place cells
     Y_action_neurons= np.zeros([N_action, 1])  #matrix of spikes action neurons
 
-    time_reward= np.zeros([Trials,1]) #stores time of reward 1
-    time_reward2 = np.copy(time_reward) #stores time of reward 2 (moved)
-    time_reward_old= np.copy(time_reward) #stores time when agent enters the previously rewarded location
+    time_reward     = np.zeros(Trials) #stores time of reward 1
+    time_reward2    = np.zeros(Trials) #stores time of reward 2 (moved)
+    time_reward_old = np.zeros(Trials) #stores time when agent enters the previously rewarded location
 
     epsp_rise=np.zeros([N_action+N_pc,N_action]) #epsp rise compontent convolution
     epsp_decay=np.zeros([N_action+N_pc,N_action]) #epsp decay compontent convolution
@@ -241,7 +241,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             median_tr = []
             pos = starting_position #initialize position at origin (centre open field)
-            rew_found=0 #flag that signals when the reward is found
+            rew_found = 0 #flag that signals when the reward is found
             tr += 1 #trial number
             t_rew=T_max #time of reward - initialized at T_max at the beginning of the trial
 
@@ -425,8 +425,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             ##save median_distance
             median_distance[tr-1] = np.median(median_tr)
-            ## plot
 
+            ## plot
             if plot_flag:
                 
                 ax1.set_title('Trial '+str(tr))
@@ -469,17 +469,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     activities['ca3'].append(ca3_activities)
     activities['ac'].append(ac_activities)
 
-    x_pos=store_pos[np.where(store_pos.any(axis=1))[0],0]
-    y_pos=store_pos[np.where(store_pos.any(axis=1))[0],1]
-
-    try:
-        pos_hist=np.histogram2d(x_pos, y_pos, bins=(np.linspace(-2,2,50),np.linspace(-2,2,50)))[0]
-    except:
-        print(pos_hist.shape)
-
     return episode, rewarding_trials,\
            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
-           pos_hist, activities, w_ca1_initial, w_ca1
+           store_pos, activities, w_ca1_initial, w_ca1
 
 if __name__ == '__main__':
 
