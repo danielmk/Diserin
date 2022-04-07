@@ -45,6 +45,23 @@ def main():
 def log_e(e):
   print(e)
 
+def get_quadrant(x,y):
+    """ 
+    Receives the x and y coordinates of the agent.
+    Returns 
+        0,1,2,3 if the agent is in the I,II,III,IV quadrant respectively
+        False if the agent is in the origin
+    """
+
+    if x>=0 and y>0 : return 0
+    if x<0 and y>=0 : return 1
+    if x<=0 and y<0 : return 2
+    if x>0  and y<=0: return 3
+
+    return False
+    
+    
+
 def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,
                 Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_flag):
 
@@ -55,7 +72,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     first_reward = None
     rewarding_trials = np.zeros(Trials)
     punishing_trials = np.zeros(Trials)
-    quadrant_map = np.empty([Trials,4])
+    quadrant_map = np.zeros([Trials,4])
     median_distance = np.zeros(Trials)
     activities = {'ca3': [], 'ca1': [], 'ac': []}
     
@@ -221,7 +238,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         # Reset if it is the last run
         if t==1:
 
-            quadrant = np.zeros([2,2])
             median_tr = []
             pos = starting_position #initialize position at origin (centre open field)
             rew_found=0 #flag that signals when the reward is found
@@ -291,8 +307,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         # store_pos[i-1,:] = pos #store position (for plotting)
 
         #save quadrant
-        if not (pos==[0,0]).all():
-            quadrant[int(not(bisect([0],pos[1]))),bisect([0],pos[0])]+=1
+        quadrant_map[tr-1, get_quadrant(pos[0], pos[1])] += 1
 
         # save median distance to centre
         median_tr.append(np.linalg.norm(pos)/2)
@@ -406,9 +421,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             ac =np.dot(np.squeeze(actions),(np.multiply(w_tot_old,w_walls[:,0:N_pc]))/a0) #vector of preferred actions according to the weights
             ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
 
-            ## save quadrant
-            quadrant_map[tr-1,:]=quadrant.flatten()/np.sum(quadrant)
-
             ##save median_distance
             median_distance[tr-1]=np.median(median_tr)
             ## plot
@@ -444,6 +456,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                 f4.remove()
                 pos2.remove()
                 t_end = T_max
+
         if old_tr != tr:
             activities['ca1'].append(ca1_activities)
             activities['ca3'].append(ca3_activities)
@@ -462,7 +475,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     except:
         print(pos_hist.shape)
 
-    return episode,first_reward,rewarding_trials,punishing_trials,quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,pos_hist, activities, w_ca1_initial, w_ca1
+    return episode,first_reward,rewarding_trials,punishing_trials,\
+           quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
+           pos_hist, activities, w_ca1_initial, w_ca1
 
 if __name__ == '__main__':
 
