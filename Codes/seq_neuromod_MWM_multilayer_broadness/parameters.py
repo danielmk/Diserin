@@ -2,6 +2,9 @@ import numpy as np
 
 builtin_variables = set(globals())
 
+"""Random seed"""
+random_seed = 42
+
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
 episodes = 1 # (default 1)

@@ -66,7 +66,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                 Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_flag):
 
     # random number of each pool
-    np.random.seed()
+    np.random.seed(random_seed)
 
     # flag to print first rewarding trial
     ever_rewarded_flag = False
@@ -84,9 +84,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     rew2_flag=0  #reward are switched
     ACh_flag=0 #acetylcholine flag if required for comparisons
     
-    t_rew = T_max #time of reward - initialized to maximum
+    t_rew = T_max
     t_extreme = t_rew + delay_post_reward #time of reward - initialized to maximu
-    t_end = T_max
 
     ## Place cells positions
 
@@ -99,7 +98,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     n_x = np.size(x_pc) #nr of place cells on axis x
     n_y = np.size(y_pc) #nr of place cells on axis y
-    pos = np.zeros([1,2]) #position of the agent at each timestep
 
     xx, yy = np.meshgrid(x_pc,y_pc)
     pc = np.stack([xx,yy], axis=2).reshape(-1,2)
@@ -121,8 +119,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     w_in_ca1 = np.random.rand(N_pc, N_pc).T
 
     W1 = np.zeros([N_action, N_pc]) #initialize unscale trace
-    trace_tot = np.zeros([N_action,N_pc]) #sum of the traces
-    eligibility_trace = np.zeros([N_action, N_pc]) #total convolution
 
     W1_sero = np.zeros([N_action, N_pc]) #initialize unscale trace
     trace_tot_sero = np.zeros([N_action,N_pc]) #sum of the traces
@@ -133,29 +129,12 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     w_ca1 = np.ones([N_pc,N_pc]).T*w_in_ca1#total weigths
     new_weight_buffer = w_ca1
 
-    X = np.zeros([N_pc,1]) #matrix of spikes place cells
-    X_cut = np.zeros([N_pc+N_action, N_action])  #matrix of spikes place cells
-    Y_action_neurons= np.zeros([N_action, 1])  #matrix of spikes action neurons
-
     time_reward     = np.zeros(Trials) #stores time of reward 1
     time_reward2    = np.zeros(Trials) #stores time of reward 2 (moved)
     time_reward_old = np.zeros(Trials) #stores time when agent enters the previously rewarded location
 
-    epsp_rise=np.zeros([N_action+N_pc,N_action]) #epsp rise compontent convolution
-    epsp_decay=np.zeros([N_action+N_pc,N_action]) #epsp decay compontent convolution
-    epsp_tot=np.zeros([N_action+N_pc, N_action]) #epsp
-
-    rho_action_neurons= np.zeros([N_action,1]) #firing rate action neurons
-    rho_rise= np.copy(rho_action_neurons)  #firing rate action neurons, rise compontent convolution
-    rho_decay = np.copy(rho_action_neurons) #firing rate action neurons, decay compontent convolution
-
-    Canc = np.ones([N_pc+N_action,N_action]).T
-    last_spike_post=np.zeros([N_action,1])-1000 #vector time last spike postsynaptic neuron
-    last_spike_ca1 = np.zeros([N_pc,1])-1000
-
-
-    store_pos = np.zeros([T_max*Trials,2]) #stores trajectories (for plotting)
-    firing_rate_store = np.zeros([N_action,T_max*Trials]) #stores firing rates action neurons (for plotting)
+    store_pos = np.zeros([Trials, T_max,2]) # stores trajectories (for plotting)
+    firing_rate_store = np.zeros([N_action, T_max, Trials]) #stores firing rates action neurons (for plotting)
 
     ## initialize plot open field
     if plot_flag:
@@ -165,7 +144,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         fig.subplots_adjust(hspace = 0.5)
 
         plt.ion()
-        #Plot of reward places and intial position
+        #Plot of reward places and initial position
         reward_plot = ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
         ax1.plot(starting_position[0],starting_position[1], 'r',marker='o',markersize=5) #plot initial starting point
 
@@ -212,266 +191,279 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     for g in range(4):
         idx = list(itertools.product(forbidden_actions[g,:].astype(int).tolist(),sides[g,:].astype(int).tolist()))
         w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
+
     # optogenetic ranges
-    ranges = [(T_max*Trials/6,2*T_max*Trials/6), (3*T_max*Trials/6,4*T_max*Trials/6), (5*T_max*Trials/6,T_max*Trials)]
+    ranges = [(T_max*Trials/6, 2*T_max*Trials/6), 
+              (3*T_max*Trials/6, 4*T_max*Trials/6), 
+              (5*T_max*Trials/6, T_max*Trials)]
     
     
-    ######## START SIMULATION ######################################
+    ######################## START SIMULATION ######################################
     w_tot_old = w_tot[0:N_action,0:N_pc] #store weights before start
     ca3_activities = []
     ca1_activities = []
     ac_activities = []
-    old_tr = 0
     w_ca1_initial = w_ca1
     
-    i = 0 # counter ms
-    tr=0  # counter trial
+    t_episode = 0 # counter ms
 
-    while i<T_max*Trials:
+    for trial in range(Trials):
 
-        i+=1 # int(1) was slower, casting useless
-        t = i%T_max # much faster than np.mod(i,T_max)
+        median_tr = []
+        pos = starting_position #initialize position at origin (centre open field)
+        rew_found = 0 #flag that signals when the reward is found
+        t_rew = T_max #time of reward - initialized at T_max at the beginning of the trial
 
-        ## reset new trial
-        # if t == 3000:
-        # return ca1_spikes
+        t_trial = 0
 
-        # Reset if it is the last run
-        if t==1:
-
-            median_tr = []
-            pos = starting_position #initialize position at origin (centre open field)
-            rew_found = 0 #flag that signals when the reward is found
-            tr += 1 #trial number
-            t_rew=T_max #time of reward - initialized at T_max at the beginning of the trial
-
-            #initialisation variables - reset between trials
-            Y_action_neurons= np.zeros([N_action, 1])
-            X_cut = np.zeros([N_pc+N_action, N_action])
-            epsp_rise=np.zeros([N_action+N_pc,N_action])
-            epsp_decay=np.zeros([N_action+N_pc,N_action])
-            epsp_rise_ca1=np.zeros([N_pc,N_pc])
-            epsp_decay_ca1=np.zeros([N_pc,N_pc])
-            epsp_tot=np.zeros([N_action+N_pc, N_action])
-            rho_action_neurons= np.zeros([N_action,1])
-            rho_rise=  np.zeros([N_action,1])
-            rho_decay =  np.zeros([N_action,1])
-            Canc = np.ones([N_pc+N_action,N_action]).T
-            Canc_ca1 = np.ones([N_pc, N_pc])
-            last_spike_post=np.zeros([N_action,1])-1000
-            trace_tot = np.zeros([N_action,N_pc])
-            eligibility_trace = np.zeros([N_action, N_pc])
-            w_ca1 = new_weight_buffer
-            print('Episode:',episode,'Trial:',tr,'Mean Weight:',w_ca1.mean())
-
-            #change reward location in the second half of the experiment
-            if (tr==(Trials/2)+1) and changepos:
-                rew1_flag=0
-                rew2_flag=1
-                np.linspace(-np.pi, np.pi, 100)
-                if plot_flag:
-                    reward_plot.pop(0).remove()
-                    #punish_plot.pop(0).remove() NOT DEFINED!
-                    reward_plot = ax1.plot(c2[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c2[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot negative reward 2
+        #initialisation variables - reset between trials
+        Y_action_neurons= np.zeros([N_action, 1])  #matrix of spikes action neurons
+        X_cut = np.zeros([N_pc+N_action, N_action])  #matrix of spikes place cells
         
-        ## place cells (CA3 layer)
-        rhos = np.multiply(rho_pc,np.exp(-np.sum((np.matlib.repmat(pos,n_x*n_y,1)-pc)**2,axis=1)/(sigma_pc**2))) #rate inhomogeneous poisson process
-        prob = rhos
-        ca3_activities.append(rhos)
+        epsp_rise = np.zeros([N_action+N_pc,N_action]) #epsp rise compontent convolution
+        epsp_decay = np.zeros([N_action+N_pc,N_action]) #epsp decay compontent convolution
+        epsp_tot = np.zeros([N_action+N_pc, N_action]) #epsp
 
-        #turn place cells off after reward is reached
-        if t>t_rew:
-            prob=np.zeros_like(rhos)
-        X = (np.random.rand(1,N_pc)<=prob.T).T #spike train pcs
+        epsp_rise_ca1=np.zeros([N_pc,N_pc])
+        epsp_decay_ca1=np.zeros([N_pc,N_pc])
         
-        epsp_rise_ca1=np.multiply(epsp_rise_ca1,Canc_ca1.T)
-        epsp_decay_ca1=np.multiply(epsp_decay_ca1,Canc_ca1.T)
+        rho_action_neurons= np.zeros([N_action,1]) #firing rate action neurons
+        rho_rise= np.copy(rho_action_neurons)  #firing rate action neurons, rise compontent convolution
+        rho_decay = np.copy(rho_action_neurons) #firing rate action neurons, decay compontent convolution
+
+        Canc = np.ones([N_pc+N_action,N_action]).T
+        Canc_ca1 = np.ones([N_pc, N_pc])
+        last_spike_post=np.zeros([N_action,1])-1000 #vector time last spike postsynaptic neuron
+        last_spike_ca1 = np.zeros([N_pc,1])-1000
         
-        # CA1 cells
-        epsp_ca1, epsp_decay_ca1, epsp_rise_ca1 = convolution(epsp_decay_ca1, epsp_rise_ca1, tau_m, tau_s, eps0, X, np.multiply(w_ca1,w_walls_ca1)) #EPSP in the model * weights
-        
-        sigma_ca1 = sigma_pc * 5
-        X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta, delta_u, i, pos, n_x, n_y, pc, sigma_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
-        ca1_activities.append(u_ca1)
+        trace_tot = np.zeros([N_action,N_pc]) #sum of the traces
+        eligibility_trace = np.zeros([N_action, N_pc]) #total convolution
+        w_ca1 = new_weight_buffer
 
-        ca1_spikes.append(X_ca1)
+        print('Episode:', episode, 'Trial:', trial, 'Mean Weight:', w_ca1.mean())
 
-        #dw_ca1 = bcm(w_ca1, 0.009133, rhos, u_ca1, epsilon=0.001)
-        dw_ca1 = bcm(w_ca1, 0.13, rhos, u_ca1, epsilon=0.0001)
+        #change reward location in the second half of the experiment
+        if ( trial==Trials//2) and changepos:
+            rew1_flag=0
+            rew2_flag=1
+            np.linspace(-np.pi, np.pi, 100)
+            if plot_flag:
+                reward_plot.pop(0).remove()
+                #punish_plot.pop(0).remove() NOT DEFINED!
+                reward_plot = ax1.plot(c2[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c2[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot negative reward 2
 
-        new_weight_buffer = new_weight_buffer + dw_ca1 / 100
-        
-        
-        #sys.exit()
-        store_pos[i-1,:] = pos #store position (for plotting)
+            print("Switched the position of the reward to location 2!")
 
-        #save quadrant
-        quadrant_map[tr-1, get_quadrant(pos[0], pos[1])] += 1
-
-        # save median distance to centre
-        median_tr.append(np.linalg.norm(pos))
-
-        ## reward
-        # agent enters reward 1 in the first half of the trial
-        if  rew_found==0 and rew1_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
-
-            rew_found=1 #flag reward found (so that trial is ended soon)
-            t_rew=t #time of reward
-            time_reward[tr-1] = t #store time of reward
-            rewarding_trials[tr-1]+=1
+        while t_trial<T_max:
             
-            if not ever_rewarded_flag:
+            t_episode  += 1
+            t_trial+= 1
 
-                ever_rewarded_flag = True
-                print('First reward,episode',episode,'trial', tr)
+            ## place cells (CA3 layer)
+            rhos = np.multiply(rho_pc,np.exp(-np.sum((np.matlib.repmat(pos,n_x*n_y,1)-pc)**2,axis=1)/(sigma_pc**2))) #rate inhomogeneous poisson process
+            prob = rhos
+            ca3_activities.append(rhos)
+
+            #turn place cells off after reward is reached
+            if t_trial>t_rew:
+                prob=np.zeros_like(rhos)
+
+            X = (np.random.rand(1,N_pc)<=prob.T).T #spike train pcs
+            
+            epsp_rise_ca1=np.multiply(epsp_rise_ca1,Canc_ca1.T)
+            epsp_decay_ca1=np.multiply(epsp_decay_ca1,Canc_ca1.T)
+            
+            # CA1 cells
+            epsp_ca1, epsp_decay_ca1, epsp_rise_ca1 = convolution(epsp_decay_ca1, epsp_rise_ca1, tau_m, tau_s, eps0, X, np.multiply(w_ca1,w_walls_ca1)) #EPSP in the model * weights
+            
+            sigma_ca1 = sigma_pc * 5
+            X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta, delta_u,t_episode, pos, n_x, n_y, pc, sigma_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
+            ca1_activities.append(u_ca1)
+
+            ca1_spikes.append(X_ca1)
+
+            #dw_ca1 = bcm(w_ca1, 0.009133, rhos, u_ca1, epsilon=0.001)
+            dw_ca1 = bcm(w_ca1, 0.13, rhos, u_ca1, epsilon=0.0001)
+
+            new_weight_buffer = new_weight_buffer + dw_ca1 / 100
+            
+            
+            #sys.exit()
+            store_pos[trial, t_trial-1, :] = pos #store position (for plotting)
+
+            #save quadrant
+            quadrant_map[trial, get_quadrant(pos[0], pos[1])] += 1
+
+            # save median distance to centre
+            median_tr.append(np.linalg.norm(pos))
+
+            ## reward
+            # agent enters reward 1 in the first half of the trial
+            if  rew_found==0 and rew1_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
+
+                rew_found=1 #flag reward found (so that trial is ended soon)
+                t_rew=t_trial #time of reward
+                time_reward[trial] = t_trial #store time of reward
+                rewarding_trials[trial]+=1
+                
+                if not ever_rewarded_flag:
+
+                    ever_rewarded_flag = True
+                    print('First reward,episode',episode,'trial', trial)
 
 
-        #cases for location switching
+            #cases for location switching
 
-        # agent enters reward 2 in the second half of the trial
-        elif rew_found==0 and rew2_flag==1 and np.sum((pos-c2)**2)<=r_goal2**2:
-            rew_found=1  #flag reward 2 found (so that trial is ended soon)
-            t_rew=t #time of reward 2
-            time_reward2[tr-1] = t #store time of reward 2
-            rewarding_trials[tr-1]+=1
+            # agent enters reward 2 in the second half of the trial
+            elif rew_found==0 and rew2_flag==1 and np.sum((pos-c2)**2)<=r_goal2**2:
 
-        elif rew1_flag==0 and rew2_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
-             #this location is no longer rewarded, so the trial is not ended
-            time_reward_old[tr-1]=t #store time of entrance old reward location
+                rew_found=1  #flag reward 2 found (so that trial is ended soon)
+                t_rew=t_trial #time of reward 2
+                time_reward2[trial] = t_trial #store time of reward 2
+                rewarding_trials[trial]+=1
 
-        ## action neurons
-        # reset after last post-synaptic spike
-        X_cut = np.matlib.repmat(np.concatenate((X_ca1,Y_action_neurons)),1,N_action)
-        # X_cut = np.matlib.repmat(np.concatenate((X,Y_action_neurons)),1,N_action)
-        X_cut = np.multiply(X_cut,Canc.T)
+                if not ever_rewarded_flag:
 
-        epsp_rise=np.multiply(epsp_rise,Canc.T)
-        epsp_decay=np.multiply(epsp_decay,Canc.T)
-        # neuron model
-        epsp_tot, epsp_decay, epsp_rise = convolution(epsp_decay, epsp_rise, tau_m, tau_s, eps0, X_cut, np.multiply(w_tot,w_walls)) #EPSP in the model * weights
-        Y_action_neurons,last_spike_post, Canc, u_ac = neuron(epsp_tot, chi, last_spike_post, tau_m, rho0, theta, delta_u, i) #sums EPSP, calculates potential and spikes
-        ac_activities.append(u_ac)
-        
-        
-        # smooth firing rate of the action neurons
-        rho_action_neurons, rho_decay, rho_rise = convolution (rho_decay, rho_rise, tau_gamma, v_gamma, 1, Y_action_neurons)
-        firing_rate_store[:,i-1] = np.squeeze(rho_action_neurons) #store action neurons' firing rates
-        # select action
-        a = (np.dot(rho_action_neurons.T,np.squeeze(actions).T)/N_action)
-        a[np.isnan(a)]=0
-        ## synaptic plasticity
+                    ever_rewarded_flag = True
+                    print('First reward,episode',episode,'trial', trial)
 
-        #Rate-based update
-        W1, eligibility_trace, trace_tot, W = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1, trace_tot, tau_e)
+            elif rew1_flag==0 and rew2_flag==1 and np.sum((pos-c)**2)<=r_goal**2:
+                #this location is no longer rewarded, so the trial is not ended
+                time_reward_old[trial]=t_trial #store time of entrance old reward location
 
-        #STDP with unsymmetric window and depression due to serotonin
-        if not(Inhib) and not(Activ):
-            W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1_sero, trace_tot_sero, tau_e_sero)
-        elif Activ and any(lower <= i<= upper for (lower, upper) in ranges):
-            #If there is overpotentiation of serotonin, assumed as doubled
-            W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1_sero, trace_tot_sero, tau_e_sero)
-        elif Inhib and any(lower <= i<= upper for (lower, upper) in ranges):
-            #If there is inhibition of serotonin, no eligibility trace is produced
-            pass
 
-        # online weights update (effective only with acetylcholine - ACh_flag=1)
-        w_tot[0:N_action,0:N_pc]= w_tot[0:N_action,0:N_pc]-eta_ACh*W*(ACh_flag)
+            ## action neurons
 
-        #weights limited between lower and upper bounds
-        w_tot[np.where(w_tot[:,0:N_pc]>w_max)]=w_max
-        w_tot[np.where(w_tot[:,0:N_pc]<w_min)]=w_min
-        ## position update
-        pos = np.squeeze(pos+a)
-        #check if agent is out of boundaries. If it is, bounce back in the opposite direction
-        if pos[0]<=bounds_x[0]:
-            pos = pos+dx*np.array([1,0])
-        else:
-            if pos[0]>= bounds_x[1]:
-                pos = pos+dx*np.array([-1,0])
-            else:
-                if pos[1]<=bounds_y[0]:
-                    pos = pos+dx*np.array([0,1])
-                else:
-                    if pos[1]>=bounds_y[1]:
-                        pos = pos+dx*np.array([0,-1])
-        #time when trial end is 300ms after reward is found
-        t_extreme = t_rew+delay_post_reward
-        if t> t_extreme and t<T_max:
-            i = int((np.ceil(i/T_max))*T_max)-1 #set i counter to the end of the trial
-            t_end = t_extreme #for plotting
+            # reset after last post-synaptic spike
+            X_cut = np.matlib.repmat(np.concatenate((X_ca1,Y_action_neurons)),1,N_action)
+            # X_cut = np.matlib.repmat(np.concatenate((X,Y_action_neurons)),1,N_action)
+            X_cut = np.multiply(X_cut,Canc.T)
 
-        if t==0:
-            t=T_max
-            ## update weights - end of trial
+            epsp_rise=np.multiply(epsp_rise,Canc.T)
+            epsp_decay=np.multiply(epsp_decay,Canc.T)
+            # neuron model
+            epsp_tot, epsp_decay, epsp_rise = convolution(epsp_decay, epsp_rise, tau_m, tau_s, eps0, X_cut, np.multiply(w_tot,w_walls)) #EPSP in the model * weights
+            Y_action_neurons,last_spike_post, Canc, u_ac = neuron(epsp_tot, chi, last_spike_post, tau_m, rho0, theta, delta_u, t_episode) #sums EPSP, calculates potential and spikes
+            ac_activities.append(u_ac)
+            
+            # smooth firing rate of the action neurons
+            rho_action_neurons, rho_decay, rho_rise = convolution (rho_decay, rho_rise, tau_gamma, v_gamma, 1, Y_action_neurons)
+            firing_rate_store[:,t_trial-1,trial] = np.squeeze(rho_action_neurons) #store action neurons' firing rates
+            # select action
+            a = (np.dot(rho_action_neurons.T,np.squeeze(actions).T)/N_action)
+            a[np.isnan(a)]=0
+            ## synaptic plasticity
 
-            # if the reward is not found, no change.
-            # change due to serotonin or dopamine
-            if Sero:
-                w_tot[0:N_action,0:N_pc]= (w_tot_old+eta_DA*eligibility_trace)*rew_found + (w_tot_old-eta_Sero*eligibility_trace_sero)*(1-rew_found)*(not Inhib)
-            else:
-                #change due to dopamine or sustained weights at the end of the trial
-                w_tot[0:N_action,0:N_pc]=w_tot[0:N_action,0:N_pc]*(1-rew_found)+(w_tot_old+eta_DA*eligibility_trace)*rew_found
+            #Rate-based update
+            W1, eligibility_trace, trace_tot, W = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1, trace_tot, tau_e)
+
+            #STDP with unsymmetric window and depression due to serotonin
+            if not(Inhib) and not(Activ):
+                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1_sero, trace_tot_sero, tau_e_sero)
+            elif Activ and any(lower <= t_episode<= upper for (lower, upper) in ranges):
+                #If there is overpotentiation of serotonin, assumed as doubled
+                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc,1).T, W1_sero, trace_tot_sero, tau_e_sero)
+            elif Inhib and any(lower <= t_episode<= upper for (lower, upper) in ranges):
+                #If there is inhibition of serotonin, no eligibility trace is produced
+                pass
+
+            # online weights update (effective only with acetylcholine - ACh_flag=1)
+            w_tot[0:N_action,0:N_pc]= w_tot[0:N_action,0:N_pc]-eta_ACh*W*(ACh_flag)
 
             #weights limited between lower and upper bounds
             w_tot[np.where(w_tot[:,0:N_pc]>w_max)]=w_max
             w_tot[np.where(w_tot[:,0:N_pc]<w_min)]=w_min
+            ## position update
+            pos = np.squeeze(pos+a)
+            #check if agent is out of boundaries. If it is, bounce back in the opposite direction
+            if pos[0]<=bounds_x[0]:
+                pos = pos+dx*np.array([1,0])
+            else:
+                if pos[0]>= bounds_x[1]:
+                    pos = pos+dx*np.array([-1,0])
+                else:
+                    if pos[1]<=bounds_y[0]:
+                        pos = pos+dx*np.array([0,1])
+                    else:
+                        if pos[1]>=bounds_y[1]:
+                            pos = pos+dx*np.array([0,-1])
 
-            #store weights before the beginning of next trial (for updates in case reward is found)
-            w_tot_old = np.copy(w_tot[0:N_action,0:N_pc])
+            #time when trial end is 300ms after reward is found
+            t_extreme = t_rew+delay_post_reward
 
-            #calculate policy
-            ac =np.dot(np.squeeze(actions),(np.multiply(w_tot_old,w_walls[:,0:N_pc]))/a0) #vector of preferred actions according to the weights
-            ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
+            if t_trial>t_extreme and t_trial<T_max:
+                t_episode = int((np.ceil(t_episode/T_max))*T_max)-1 
+                t_end = t_extreme #for plotting
+                break
 
-            ##save median_distance
-            median_distance[tr-1] = np.median(median_tr)
 
-            ## plot
-            if plot_flag:
-                
-                ax1.set_title('Trial '+str(tr))
-                #display trajectory of the agent in each trial
-                f3 =ax1.plot(store_pos[int((np.floor((i-1)/T_max))*T_max+1):int((np.floor((i-1)/T_max))*T_max+t_end+1),0], store_pos[int((np.floor((i-1)/T_max))*T_max+1):int((np.floor((i-1)/T_max))*T_max+t_end+1),1]) #trajectory
-                point_plot, = ax1.plot(starting_position[0],starting_position[1],'r',marker='o',markersize=5) #starting point
+        ## update weights - end of trial
 
-                #display action neurons firing rates (activity bump)
-                pos = ax2.imshow(firing_rate_store[:,int((np.floor((i-1)/T_max))*T_max):int((np.floor((i-1)/T_max))*T_max+t_end)],cmap='Blues', interpolation='none',aspect='auto')
-                #colorbar
-                if tr==1:
-                    fig.colorbar(pos, ax=ax2)
-                #display weights over the open field, averaged over action neurons
-                w_plot = np.mean(w_tot[:,0:N_pc],axis=0) #use weights as they were at the beginning of the trial
-                w_plot = np.reshape(w_plot,(int(np.sqrt(N_pc)),int(np.sqrt(N_pc))))
-                pos2 = ax3.imshow(w_plot,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
-                #set(gca,'YDir','normal')
-                if tr==1:
-                    fig.colorbar(pos2, ax=ax3)
+        # if the reward is not found, no change (and not Inhib is true)
+        # change due to serotonin or dopamine
+        if Sero:
+            w_tot[0:N_action,0:N_pc]= (w_tot_old+eta_DA*eligibility_trace)*rew_found + (w_tot_old-eta_Sero*eligibility_trace_sero)*(1-rew_found)*(not Inhib)
+        else:
+            #change due to dopamine or sustained weights at the end of the trial
+            w_tot[0:N_action,0:N_pc]=w_tot[0:N_action,0:N_pc]*(1-rew_found)+(w_tot_old+eta_DA*eligibility_trace)*rew_found
 
-                #plot policy as a vector field
-                #filter zero values
-                ac_norm=np.max(np.linalg.norm(ac,axis=0))
-                f4=ax4.quiver(pc[:,0], pc[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
-                #time.sleep(1.0)
-                fig.canvas.draw()
-                plt.pause(0.00001)
-                f3.pop(0).remove()
-                f4.remove()
-                pos2.remove()
-                t_end = T_max
+        #weights limited between lower and upper bounds
+        w_tot[np.where(w_tot[:,0:N_pc]>w_max)]=w_max
+        w_tot[np.where(w_tot[:,0:N_pc]<w_min)]=w_min
 
-        if old_tr != tr:
-            activities['ca1'].append(ca1_activities)
-            activities['ca3'].append(ca3_activities)
-            activities['ac'].append(ac_activities)
-        old_tr = tr
+        #store weights before the beginning of next trial (for updates in case reward is found)
+        w_tot_old = np.copy(w_tot[0:N_action,0:N_pc])
+
+        #calculate policy
+        ac =np.dot(np.squeeze(actions),(np.multiply(w_tot_old,w_walls[:,0:N_pc]))/a0) #vector of preferred actions according to the weights
+        ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
+
+        ##save median_distance
+        median_distance[trial] = np.median(median_tr)
+
+        ## plot
+        if plot_flag:
+            
+            ax1.set_title('Trial '+str(trial))
+            #display trajectory of the agent in each trial
+            f3 =ax1.plot(store_pos[trial, : ,0], store_pos[trial, : ,1]) #trajectory
+            ax1.plot(starting_position[0],starting_position[1],'r',marker='o',markersize=5) #starting point
+
+            #display action neurons firing rates (activity bump)
+            pos = ax2.imshow(
+                firing_rate_store[:,:,trial],cmap='Blues', interpolation='none',aspect='auto')
+            #colorbar
+            if trial==1:
+                fig.colorbar(pos, ax=ax2)
+            #display weights over the open field, averaged over action neurons
+            w_plot = np.mean(w_tot[:,0:N_pc],axis=0) #use weights as they were at the beginning of the trial
+            w_plot = np.reshape(w_plot,(int(np.sqrt(N_pc)),int(np.sqrt(N_pc))))
+            pos2 = ax3.imshow(w_plot,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
+            #set(gca,'YDir','normal')
+            if trial==1:
+                fig.colorbar(pos2, ax=ax3)
+
+            #plot policy as a vector field
+            #filter zero values
+            ac_norm=np.max(np.linalg.norm(ac,axis=0))
+            f4=ax4.quiver(pc[:,0], pc[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
+            #time.sleep(1.0)
+            fig.canvas.draw()
+            plt.pause(0.00001)
+            f3.pop(0).remove()
+            f4.remove()
+            pos2.remove()
+            t_end = T_max
+
 
     activities['ca1'].append(ca1_activities)
     activities['ca3'].append(ca3_activities)
     activities['ac'].append(ac_activities)
 
     return episode, rewarding_trials,\
-           quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
-           store_pos, activities, w_ca1_initial, w_ca1
+        quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
+        store_pos, activities, w_ca1_initial, w_ca1
+
 
 if __name__ == '__main__':
 
