@@ -5,7 +5,7 @@ import sys
 sys.path.extend(['../', './Codes/'])
 
 from numba import jit, cuda
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy.matlib
@@ -23,26 +23,76 @@ import pdb
 
 from parameters import *
 
+"""
+DESCRIPTION OF THE OUTPUT OBJECT results (saved as results.pickle)
+
+results is a tuple of two elements
+
+    results[0] is a dict with the name and values of parameters/options used for the simulation
+
+    results[1] is a list of <NUMBER OF EPISODES> elements
+
+        each results[1][i] is a tuple of 11 elements, namely:
+
+            [0] integer number, index of the episode (0,1,2,...)
+            [1] array of shape (<NUMBER OF TRIALS>)
+                It is 1 if the trial was rewarding, 0 otherwise 
+            [2] array of shape (<NUMBER OF TRIALS>, 4)
+                Each row refers to one of the trials. Elements 0,1,2,3 of a row refer respectively
+                to the I,II,III,IV quadrant of the space. They are integers and correspond to the
+                number of times that the agent was in that quadrant during the trial (after each move)
+            [3] array of shape (<NUMBER OF TRIALS>)
+                Each element is the median distance of the agent from the center, during the trial
+            [4] array of shape (<NUMBER OF TRIALS>)
+                Each element is the time when the reward was reached (0 if never reached)
+            [5] array of shape (<NUMBER OF TRIALS>)
+                Each element is the time when the reward 2 was first reached 
+                (0 if never reached)
+            [6] array of shape (<NUMBER OF TRIALS>)
+                Each element is the time when the position of reward 1 was reached, but 
+                the reward was moved to position 2
+            [7] array of shape (<NUMBER OF TRIALS>, <T_max>, 2)
+                The position of the agent at each time instant of each trial
+            [8] activities
+            [9] w_ca1_initial
+            [10] w_ca1              
+"""
+
+
 def main():
 
     results=[]
 
-    for episode in range(0,episodes):
-
-        print('Episode',episode)
-        # results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,),error_callback=log_e))
+    if episodes==1:
         results.append(episode_run(jobID,episode,plot_flag,trials,changepos,Sero,
                                     eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
                                     tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3))
-        # ca1_spikes = episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,Activ,Inhib,tau_DA,tau_Sero,)
-        # return ca1_spikes
+    else:
 
-    # results_episode = [result.get() for result in results]
+        pool = multiprocessing.Pool(os.cpu_count() - 1)
+
+        for episode in range(0,episodes):
+            print('Episode',episode)
+
+            results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,trials,changepos,Sero,
+                                                        eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
+                                                        tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3),error_callback=log_e))
+            
+            current_process = psutil.Process()
+            children = current_process.children(recursive=True)
+
+            while len(children) > os.cpu_count() - 1:
+                time.sleep(0.1)
+                current_process = psutil.Process()
+                children = current_process.children(recursive=True)
+
+        results = [result.get() for result in results]
+        pool.close()
+        pool.join()
 
     with open(jobID+'.pickle', 'wb') as myfile:
-        pickle.dump((descriptor,results), myfile)
 
-    return results
+        pickle.dump((descriptor,results), myfile)
 
 def log_e(e):
   print(e)
@@ -481,4 +531,4 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
 if __name__ == '__main__':
 
-    results = main()
+    main()
