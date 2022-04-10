@@ -14,7 +14,8 @@ changepos = False
 Sero = True
 Activ = False # Cyclic serotonin potentiation
 Inhib = False # Cyclic serotonin inhibition
-offset = True
+offset_ca1 = False
+offset_ca3 = True
 
 """ Learning rates """
 eta_DA = 0.01 # Learning rate for dopamine
