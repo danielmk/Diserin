@@ -5,6 +5,7 @@ import sys
 sys.path.extend(['../', './Codes/'])
 
 from numba import jit, cuda
+
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy.matlib
@@ -83,8 +84,8 @@ def make_pc_layer(bounds_x, bounds_y, space_pc, offset):
 def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,
                 Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3):
 
-    # random number of each pool
-    np.random.seed(random_seed)
+    # different random seed for each pool
+    np.random.seed(random_seed + episode)
 
     # flag to print first rewarding trial
     ever_rewarded_flag = False
@@ -273,13 +274,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             t_trial+= 1
 
             ## place cells (CA3 layer)
-            rhos = np.multiply(rho_pc,np.exp(-np.sum((np.matlib.repmat(pos,n_x_ca3*n_y_ca3,1)-pc_ca3)**2,axis=1)/(sigma_pc**2))) #rate inhomogeneous poisson process
+            rhos = rho_pc * np.exp(-np.sum((pos-pc_ca3)**2,axis=1)/(sigma_pc_ca3**2)) #rate inhomogeneous poisson process
             prob = rhos
             ca3_activities.append(rhos)
 
             #turn place cells off after reward is reached
             if t_trial>t_rew:
-                prob=np.zeros_like(rhos)
+                prob = np.zeros_like(rhos)
 
             X = (np.random.rand(1,N_pc_ca3)<=prob.T).T #spike train pcs
             
@@ -289,14 +290,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             # CA1 cells
             epsp_ca1, epsp_decay_ca1, epsp_rise_ca1 = convolution(epsp_decay_ca1, epsp_rise_ca1, tau_m, tau_s, eps0, X, np.multiply(w_ca1,w_walls_ca1)) #EPSP in the model * weights
             
-            sigma_ca1 = sigma_pc * 5
-            X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta, delta_u,t_episode, pos, n_x_ca1, n_y_ca1, pc_ca1, sigma_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
+            X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta, delta_u,t_episode, pos, n_x_ca1, n_y_ca1, pc_ca1, sigma_pc_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
             ca1_activities.append(u_ca1)
 
             ca1_spikes.append(X_ca1)
 
             #dw_ca1 = bcm(w_ca1, 0.009133, rhos, u_ca1, epsilon=0.001)
-            dw_ca1 = bcm(w_ca1, 0.13, rhos, u_ca1, epsilon=0.0001)
+            dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=0.0001)
 
             new_weight_buffer = new_weight_buffer + dw_ca1 / 100
             

@@ -58,7 +58,8 @@ space_pc = 0.4 #place cells separation distance
 bounds_x = np.array([-2,2]) #bounds open field, x axis
 bounds_y = np.array([-2,2]) #bounds open field, y axis
 rho_pc=400*10**(-3) #maximum firing rate place cells, according to Poisson
-sigma_pc=0.4 #pc separation distance
+sigma_pc_ca3 = 0.4
+sigma_pc_ca1 = sigma_pc_ca3 * 5
 
 
 """ Action neurons parameters"""
