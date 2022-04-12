@@ -64,6 +64,7 @@ def main():
     results=[]
 
     if episodes==1:
+        episode = 0
         results.append(episode_run(jobID,episode,plot_flag,trials,changepos,Sero,
                                     eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
                                     tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3))
@@ -375,7 +376,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                     print('First reward,episode',episode,'trial', trial)
 
 
-            #cases for location switching
+            #cases for location switching 
 
             # agent enters reward 2 in the second half of the trial
             elif rew_found==0 and rew2_flag==1 and np.sum((pos-c2)**2)<=r_goal2**2:
@@ -418,14 +419,15 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             ## synaptic plasticity
 
             #Rate-based update
-            W1, eligibility_trace, trace_tot, W = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1, trace_tot, tau_e)
+            # Maybe here it goes u_ca1 in place of prob? (N_pc_ca3, N_action) ()
+            W1, eligibility_trace, trace_tot, W = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(u_ca1.T,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1, trace_tot, tau_e)
 
             #STDP with unsymmetric window and depression due to serotonin
             if not(Inhib) and not(Activ):
-                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1_sero, trace_tot_sero, tau_e_sero)
+                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(u_ca1.T,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1_sero, trace_tot_sero, tau_e_sero)
             elif Activ and any(lower <= t_episode<= upper for (lower, upper) in ranges):
                 #If there is overpotentiation of serotonin, assumed as doubled
-                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(prob,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1_sero, trace_tot_sero, tau_e_sero)
+                W1_sero, eligibility_trace_sero, trace_tot_sero, W_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(u_ca1.T,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1_sero, trace_tot_sero, tau_e_sero)
             elif Inhib and any(lower <= t_episode<= upper for (lower, upper) in ranges):
                 #If there is inhibition of serotonin, no eligibility trace is produced
                 pass

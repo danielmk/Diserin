@@ -15,7 +15,7 @@ Sero = True
 Activ = False # Cyclic serotonin potentiation
 Inhib = False # Cyclic serotonin inhibition
 offset_ca1 = False
-offset_ca3 = True
+offset_ca3 = False
 
 """ Learning rates """
 eta_DA = 0.01 # Learning rate for dopamine
@@ -59,7 +59,7 @@ bounds_x = np.array([-2,2]) #bounds open field, x axis
 bounds_y = np.array([-2,2]) #bounds open field, y axis
 rho_pc=400*10**(-3) #maximum firing rate place cells, according to Poisson
 sigma_pc_ca3 = 0.4
-sigma_pc_ca1 = sigma_pc_ca3 * 5
+sigma_pc_ca1 = 0.4 # (increase this for broadness)
 
 
 """ Action neurons parameters"""
@@ -77,7 +77,7 @@ tau_gamma = 50 #raise time convolution action selection
 v_gamma = 20 #decay time convolution action selection
 
 psi = 20 # the higher, the more narrow the range of excitation
-w_minus = -300 * 2
+w_minus = -300 # (consider decreasing it)
 w_plus = 100
 
 a0=.08 # action?
