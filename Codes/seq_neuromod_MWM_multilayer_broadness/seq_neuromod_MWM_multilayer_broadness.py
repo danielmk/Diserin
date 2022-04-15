@@ -349,8 +349,11 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             ca1_activities.append(u_ca1)
             ca1_spikes.append(X_ca1)
 
-            #dw_ca1 = bcm(w_ca1, 0.009133, rhos, u_ca1, epsilon=0.001)
-            dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=0.0001)
+            # mean activity u_ca1 about 9e-3
+            if theta_bcm == "sliding":
+                dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=epsilon_bcm)
+            else:
+                dw_ca1 = bcm(w_ca1, theta_bcm, rhos, u_ca1, epsilon=epsilon_bcm)
             new_weight_buffer = new_weight_buffer + dw_ca1 / 100
             
             #store position (for plotting)

@@ -7,8 +7,8 @@ random_seed = 42
 
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
-episodes = 1 # (default 1)
-trials = 40 # (default 40)
+episodes = 1 # number of agents
+trials = 40 # number of trials for each agent
 plot_flag = True
 changepos = False
 Sero = True
@@ -88,6 +88,9 @@ dx = 0.01 # length of bouncing back from walls
 """ CA3 parameters"""
 ca3_scale = 0.1 # To what extent does CA1 receive CA3 input?
 
+"""BCM parameters"""
+theta_bcm = 9e-3 # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
+epsilon_bcm = 1e-4 # weight decay strength
 
 """ Other parameters"""
 ## Feed-forward weights parameters
