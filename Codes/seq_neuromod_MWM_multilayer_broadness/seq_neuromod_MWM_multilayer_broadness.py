@@ -314,7 +314,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             np.linspace(-np.pi, np.pi, 100)
             if plot_flag:
                 reward_plot.pop(0).remove()
-                #punish_plot.pop(0).remove() NOT DEFINED!
                 reward_plot = ax1.plot(c2[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c2[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot negative reward 2
 
             print("Switched the position of the reward to location 2!")
@@ -326,36 +325,38 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             ## place cells (CA3 layer)
             rhos = rho_pc * np.exp(-np.sum((pos-pc_ca3)**2,axis=1)/(sigma_pc_ca3**2)) #rate inhomogeneous poisson process
-            prob = rhos
             ca3_activities.append(rhos)
 
             #turn place cells off after reward is reached
-            if t_trial>t_rew:
+            # this is because the simuluation continues for a while (300ms) after the reward is found, but place cells should not fire anymore
+            if t_trial>t_rew: 
                 prob = np.zeros_like(rhos)
+            else:
+                prob = rhos
 
-            X = (np.random.rand(1,N_pc_ca3)<=prob.T).T #spike train pcs
+            X = (np.random.rand(N_pc_ca3) <= prob).reshape(-1,1) #spike train CA3 pcs
             
-            epsp_rise_ca1= epsp_rise_ca1 * Canc_ca1.T
-            epsp_decay_ca1= epsp_decay_ca1 * Canc_ca1.T
+            epsp_rise_ca1 = epsp_rise_ca1 * Canc_ca1.T
+            epsp_decay_ca1 = epsp_decay_ca1 * Canc_ca1.T
             
             # CA1 cells
-            epsp_ca1, epsp_decay_ca1, epsp_rise_ca1 = convolution(epsp_decay_ca1, epsp_rise_ca1, tau_m, tau_s, eps0, X, np.multiply(w_ca1,w_walls_ca1)) #EPSP in the model * weights
+            epsp_ca1, epsp_decay_ca1, epsp_rise_ca1 = convolution(epsp_decay_ca1, epsp_rise_ca1, tau_m, tau_s, 
+                                                                  eps0, X, np.multiply(w_ca1,w_walls_ca1)) #EPSP in the model * weights
             
-            X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta, delta_u,t_episode, pos, n_x_ca1, n_y_ca1, pc_ca1, sigma_pc_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
+            X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta,
+                                                                delta_u,t_episode, pos, n_x_ca1, n_y_ca1, pc_ca1, sigma_pc_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
+            
             ca1_activities.append(u_ca1)
-
             ca1_spikes.append(X_ca1)
 
             #dw_ca1 = bcm(w_ca1, 0.009133, rhos, u_ca1, epsilon=0.001)
             dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=0.0001)
-
             new_weight_buffer = new_weight_buffer + dw_ca1 / 100
             
-            
-            #sys.exit()
-            store_pos[trial, t_trial-1, :] = pos #store position (for plotting)
+            #store position (for plotting)
+            store_pos[trial, t_trial-1, :] = pos 
 
-            #save quadrant
+            # save quadrant
             quadrant_map[trial, get_quadrant(pos[0], pos[1])] += 1
 
             # save median distance to centre
@@ -400,11 +401,10 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             # reset after last post-synaptic spike
             X_cut = np.matlib.repmat(np.concatenate((X_ca1,Y_action_neurons)),1,N_action)
-            # X_cut = np.matlib.repmat(np.concatenate((X,Y_action_neurons)),1,N_action)
-            X_cut = np.multiply(X_cut,Canc.T)
+            X_cut = X_cut*Canc.T
+            epsp_rise = epsp_rise*Canc.T
+            epsp_decay = epsp_decay*Canc.T
 
-            epsp_rise=np.multiply(epsp_rise,Canc.T)
-            epsp_decay=np.multiply(epsp_decay,Canc.T)
             # neuron model
             epsp_tot, epsp_decay, epsp_rise = convolution(epsp_decay, epsp_rise, tau_m, tau_s, eps0, X_cut, np.multiply(w_tot,w_walls)) #EPSP in the model * weights
             Y_action_neurons,last_spike_post, Canc, u_ac = neuron(epsp_tot, chi, last_spike_post, tau_m, rho0, theta, delta_u, t_episode) #sums EPSP, calculates potential and spikes
@@ -413,11 +413,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             # smooth firing rate of the action neurons
             rho_action_neurons, rho_decay, rho_rise = convolution (rho_decay, rho_rise, tau_gamma, v_gamma, 1, Y_action_neurons)
             firing_rate_store[:,t_trial-1,trial] = np.squeeze(rho_action_neurons) #store action neurons' firing rates
+
             # select action
             a = (np.dot(rho_action_neurons.T,np.squeeze(actions).T)/N_action)
             a[np.isnan(a)]=0
-            ## synaptic plasticity
 
+
+            ## synaptic plasticity
             #Rate-based update
             # Maybe here it goes u_ca1 in place of prob? (N_pc_ca3, N_action) ()
             W1, eligibility_trace, trace_tot, W = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(u_ca1.T,N_action,1), np.matlib.repmat(np.squeeze(rho_action_neurons),N_pc_ca1,1).T, W1, trace_tot, tau_e)
@@ -459,7 +461,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             if t_trial>t_extreme and t_trial<T_max:
                 t_episode = int((np.ceil(t_episode/T_max))*T_max)-1 
-                t_end = t_extreme #for plotting
                 break
 
 
