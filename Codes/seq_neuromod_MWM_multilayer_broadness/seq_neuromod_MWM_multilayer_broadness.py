@@ -53,7 +53,7 @@ results is a tuple of two elements
                 the reward was moved to position 2
             [7] array of shape (<NUMBER OF TRIALS>, <T_max>, 2)
                 The position of the agent at each time instant of each trial
-            [8] activities
+            [8] MISSING IF save_activities=False, the history of layers' activities 
             [9] w_ca1_initial
             [10] w_ca1              
 """
@@ -64,6 +64,7 @@ def main():
     results=[]
 
     if episodes==1:
+        
         episode = 0
         results.append(episode_run(jobID,episode,plot_flag,trials,changepos,Sero,
                                     eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
@@ -94,6 +95,7 @@ def main():
     with open(jobID+'.pickle', 'wb') as myfile:
 
         pickle.dump((descriptor,results), myfile)
+
 
 def log_e(e):
   print(e)
@@ -526,14 +528,21 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             t_end = T_max
 
 
-    activities['ca1'].append(ca1_activities)
-    activities['ca3'].append(ca3_activities)
-    activities['ac'].append(ac_activities)
+    if save_activities:
+        activities['ca1'].append(ca1_activities)
+        activities['ca3'].append(ca3_activities)
+        activities['ac'].append(ac_activities)
 
-    return episode, rewarding_trials,\
-        quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
-        store_pos, activities, w_ca1_initial, w_ca1
+        return episode, rewarding_trials,\
+            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
+            store_pos, activities, w_ca1_initial, w_ca1
+    
+    else:
 
+        return episode, rewarding_trials,\
+            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
+            store_pos, w_ca1_initial, w_ca1
+     
 
 if __name__ == '__main__':
 
