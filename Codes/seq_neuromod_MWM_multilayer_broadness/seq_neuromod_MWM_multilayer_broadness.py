@@ -362,8 +362,11 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             # mean activity u_ca1 about 9e-3
             if theta_bcm == "sliding":
                 dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=epsilon_bcm)
+            elif theta_bcm == "super_sliding":
+                dw_ca1 = bcm(w_ca1, (u_ca1**2).mean(), rhos, u_ca1, epsilon=epsilon_bcm)
             else:
                 dw_ca1 = bcm(w_ca1, theta_bcm, rhos, u_ca1, epsilon=epsilon_bcm)
+                
             new_weight_buffer = new_weight_buffer + dw_ca1 / 100
             
             #store position (for plotting)
