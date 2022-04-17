@@ -8,7 +8,7 @@ random_seed = 42
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
 episodes = 1 # number of agents
-trials = 40 # number of trials for each agent
+trials = 2 # number of trials for each agent
 plot_flag = True
 changepos = False
 Sero = True
@@ -17,6 +17,7 @@ Inhib = False # Cyclic serotonin inhibition
 offset_ca1 = False
 offset_ca3 = False
 save_activities = False # Whether to store in the results.pickle file also the activitiy history for the layers. Note: this is very memory consuming, 15GB for about 20 episodes
+save_w_ca1 = True
 
 """ Learning rates """
 eta_DA = 0.01 # Learning rate for dopamine

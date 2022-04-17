@@ -32,7 +32,7 @@ results is a tuple of two elements
 
     results[1] is a list of <NUMBER OF EPISODES> elements
 
-        each results[1][i] is a tuple of 11 elements, namely:
+        each results[1][i] is a tuple of ? elements, namely:
 
             [0] integer number, index of the episode (0,1,2,...)
             [1] array of shape (<NUMBER OF TRIALS>)
@@ -53,9 +53,14 @@ results is a tuple of two elements
                 the reward was moved to position 2
             [7] array of shape (<NUMBER OF TRIALS>, <T_max>, 2)
                 The position of the agent at each time instant of each trial
-            [8] MISSING IF save_activities=False, the history of layers' activities 
+
+            # if save_activities=True
+            [8] MISSING IF , the history of layers' activities 
+
+            # if save_w_ca1=True
             [9] w_ca1_initial
-            [10] w_ca1              
+            [10] w_ca1
+            [11] w_ca1.mean() history              
 """
 
 
@@ -271,6 +276,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     ca1_activities = []
     ac_activities = []
     w_ca1_initial = w_ca1
+    w_ca1_means = []
     
     t_episode = 0 # counter ms
 
@@ -308,6 +314,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         w_ca1 = new_weight_buffer
 
         print('Episode:', episode, 'Trial:', trial, 'Mean Weight:', w_ca1.mean())
+
+        w_ca1_means.append(w_ca1.mean())
 
         #change reward location in the second half of the experiment
         if ( trial==Trials//2) and changepos:
@@ -527,21 +535,23 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             pos2.remove()
             t_end = T_max
 
+    activities['ca1'].append(ca1_activities)
+    activities['ca3'].append(ca3_activities)
+    activities['ac'].append(ac_activities)
+
+    returns = (episode, rewarding_trials,quadrant_map,median_distance,
+               time_reward,time_reward2,time_reward_old, store_pos)
 
     if save_activities:
-        activities['ca1'].append(ca1_activities)
-        activities['ca3'].append(ca3_activities)
-        activities['ac'].append(ac_activities)
 
-        return episode, rewarding_trials,\
-            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
-            store_pos, activities, w_ca1_initial, w_ca1
+        returns = returns + (activities,)
     
-    else:
+    if save_w_ca1:
 
-        return episode, rewarding_trials,\
-            quadrant_map,median_distance,time_reward,time_reward2,time_reward_old,\
-            store_pos, w_ca1_initial, w_ca1
+        returns += returns + (np.array(w_ca1_means),)
+
+    
+    return returns
      
 
 if __name__ == '__main__':
