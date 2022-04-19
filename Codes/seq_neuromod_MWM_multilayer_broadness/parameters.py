@@ -18,6 +18,7 @@ offset_ca1 = False
 offset_ca3 = False
 save_activities = False # Whether to store in the results.pickle file also the activitiy history for the layers. Note: this is very memory consuming, 15GB for about 20 episodes
 save_w_ca1 = True
+save_pos = False
 
 """ Learning rates """
 eta_DA = 0.01 # Learning rate for dopamine

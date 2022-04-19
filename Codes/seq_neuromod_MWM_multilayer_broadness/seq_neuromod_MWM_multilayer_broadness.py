@@ -543,7 +543,11 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     activities['ac'].append(ac_activities)
 
     returns = (episode, rewarding_trials,quadrant_map,median_distance,
-               time_reward,time_reward2,time_reward_old, store_pos)
+               time_reward,time_reward2,time_reward_old)
+
+    if save_pos:
+
+        returns = returns + (store_pos,)
 
     if save_activities:
 
@@ -551,7 +555,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     
     if save_w_ca1:
 
-        returns += returns + (np.array(w_ca1_means),)
+        returns += returns + (np.array(w_ca1_means), w_ca1_initial, w_ca1)
 
     
     return returns
