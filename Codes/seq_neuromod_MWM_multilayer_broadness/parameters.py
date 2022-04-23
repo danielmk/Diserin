@@ -89,7 +89,7 @@ dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 0.1 # To what extent does CA1 receive CA3 input?
+ca3_scale = 0.1 # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 """BCM parameters"""
 theta_bcm = 9e-3 # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
