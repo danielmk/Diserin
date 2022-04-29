@@ -22,6 +22,7 @@ import psutil
 import pdb
 
 from parameters import *
+from layers import CA3_layer
 
 """
 DESCRIPTION OF THE OUTPUT OBJECT results (saved as results.pickle)
@@ -70,8 +71,7 @@ def main():
 
     if episodes==1:
         
-        episode = 0
-        results.append(episode_run(jobID,episode,plot_flag,trials,changepos,Sero,
+        results.append(episode_run(jobID, 0,plot_flag,trials,changepos,Sero,
                                     eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
                                     tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3))
     else:
@@ -159,7 +159,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     print('Initiated episode:',episode)
     rew1_flag=1  #rewards are in the initial positions
     rew2_flag=0  #reward are switched
-    ACh_flag=0 #acetylcholine flag if required for comparisons
     
     t_rew = T_max
     t_extreme = t_rew + delay_post_reward #time of reward - initialized to maximu
@@ -167,7 +166,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     ## Place cells positions
 
     pc_ca1, N_pc_ca1, n_x_ca1, n_y_ca1 = make_pc_layer(bounds_x, bounds_y, space_pc, offset_ca1)
-    pc_ca3, N_pc_ca3, n_x_ca3, n_y_ca3 = make_pc_layer(bounds_x, bounds_y, space_pc, offset_ca3)
+    
+    CA3 = CA3_layer(bounds_x, bounds_y, space_pc, offset_ca3, rho_pc, sigma_pc_ca3)
 
     #winner-take-all weights
     theta_actor = np.reshape(2*np.pi*np.arange(1,N_action+1)/N_action,(40,1)) #angles actions
@@ -182,7 +182,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     # feedforward weights
     w_in = np.ones([N_pc_ca1, N_action]).T / 5 # initialization feed-forward weights
-    w_in_ca1 = np.random.rand(N_pc_ca3, N_pc_ca1).T
+    w_in_ca1 = np.random.rand(CA3.N, N_pc_ca1).T
 
     W1 = np.zeros([N_action, N_pc_ca1]) #initialize unscale trace
 
@@ -192,7 +192,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     ## initialise variables
     w_tot = np.concatenate((np.ones([N_pc_ca1,N_action]).T*w_in,w_lateral),axis=1)#total weigths
-    w_ca1 = np.ones([N_pc_ca3,N_pc_ca1]).T*w_in_ca1#total weigths
+    w_ca1 = np.ones([CA3.N,N_pc_ca1]).T*w_in_ca1#total weigths
     new_weight_buffer = w_ca1
 
     time_reward     = np.zeros(Trials) #stores time of reward 1
@@ -224,7 +224,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         ax1.scatter(pc_ca1[:,0],pc_ca1[:,1], s=1, label="CA1")
 
         if offset_ca1!=offset_ca3:
-            ax1.scatter(pc_ca3[:,0],pc_ca3[:,1], s=1, label ="CA3")
+            ax1.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
             ax1.legend()
 
         ax1.set_title('Trial 0')
@@ -259,7 +259,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     
     #kill connections between place cells on the walls and forbidden actions
     w_walls = np.ones([N_action, N_pc_ca1+N_action])
-    w_walls_ca1 = np.ones([N_pc_ca1, N_pc_ca3])
+    w_walls_ca1 = np.ones([N_pc_ca1, CA3.N])
     for g in range(4):
         idx = list(itertools.product(forbidden_actions[g,:].astype(int).tolist(),sides[g,:].astype(int).tolist()))
         w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
@@ -298,9 +298,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         epsp_tot   = np.zeros([N_action+N_pc_ca1, N_action]) #epsp
         Canc = np.ones([N_pc_ca1+N_action, N_action]).T
 
-        epsp_rise_ca1  = np.zeros([N_pc_ca3, N_pc_ca1])
-        epsp_decay_ca1 = np.zeros([N_pc_ca3, N_pc_ca1])
-        Canc_ca1 = np.ones([N_pc_ca3, N_pc_ca1]).T
+        epsp_rise_ca1  = np.zeros([CA3.N, N_pc_ca1])
+        epsp_decay_ca1 = np.zeros([CA3.N, N_pc_ca1])
+        Canc_ca1 = np.ones([CA3.N, N_pc_ca1]).T
         
         rho_action_neurons= np.zeros([N_action,1]) #firing rate action neurons
         rho_rise= np.copy(rho_action_neurons)  #firing rate action neurons, rise compontent convolution
@@ -334,17 +334,15 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             t_trial+= 1
 
             ## place cells (CA3 layer)
-            rhos = rho_pc * np.exp(-np.sum((pos-pc_ca3)**2,axis=1)/(sigma_pc_ca3**2)) #rate inhomogeneous poisson process
+            rhos = CA3.firing_rate(pos) #rate inhomogeneous poisson process
             ca3_activities.append(rhos)
 
             #turn place cells off after reward is reached
-            # this is because the simuluation continues for a while (300ms) after the reward is found, but place cells should not fire anymore
+            #this is because the simuluation continues for a while (300ms) after the reward is found, but place cells should not fire anymore
             if t_trial>t_rew: 
-                prob = np.zeros_like(rhos)
-            else:
-                prob = rhos
+                rhos[:] = 0
 
-            X = (np.random.rand(N_pc_ca3) <= prob).reshape(-1,1) #spike train CA3 pcs
+            X = (np.random.rand(CA3.N) <= rhos).reshape(-1,1) #spike train CA3 pcs
             
             epsp_rise_ca1 = epsp_rise_ca1 * Canc_ca1.T
             epsp_decay_ca1 = epsp_decay_ca1 * Canc_ca1.T
@@ -451,7 +449,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                 pass
 
             # online weights update (effective only with acetylcholine - ACh_flag=1)
-            w_tot[0:N_action,0:N_pc_ca1]= w_tot[0:N_action,0:N_pc_ca1]-eta_ACh*W*(ACh_flag)
+            if ACh_flag:
+                w_tot[0:N_action,0:N_pc_ca1]= w_tot[0:N_action,0:N_pc_ca1]-eta_ACh*W
 
             #weights limited between lower and upper bounds
             w_tot[np.where(w_tot[:,0:N_pc_ca1]>w_max)] = w_max
@@ -547,15 +546,15 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     if save_pos:
 
-        returns = returns + (store_pos,)
+        returns += (store_pos,)
 
     if save_activities:
 
-        returns = returns + (activities,)
+        returns += (activities,)
     
     if save_w_ca1:
 
-        returns += returns + (np.array(w_ca1_means), w_ca1_initial, w_ca1)
+        returns += (np.array(w_ca1_means), w_ca1_initial, w_ca1)
 
     
     return returns
