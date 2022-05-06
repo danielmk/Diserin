@@ -192,8 +192,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     ## initialise variables
     w_tot = np.concatenate((np.ones([N_pc_ca1,N_action]).T*w_in,w_lateral),axis=1)#total weigths
-    w_ca1 = np.ones([CA3.N,N_pc_ca1]).T*w_in_ca1#total weigths
-    new_weight_buffer = w_ca1
+    w_ca1 = np.ones([N_pc_ca1, CA3.N]) * w_in_ca1#total weigths
 
     time_reward     = np.zeros(Trials) #stores time of reward 1
     time_reward2    = np.zeros(Trials) #stores time of reward 2 (moved)
@@ -311,7 +310,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         
         trace_tot = np.zeros([N_action,N_pc_ca1]) #sum of the traces
         eligibility_trace = np.zeros([N_action, N_pc_ca1]) #total convolution
-        w_ca1 = new_weight_buffer
+
+        dw_ca1 = np.zeros(w_ca1.shape)
 
         print('Episode:', episode, 'Trial:', trial, 'Mean Weight:', w_ca1.mean())
 
@@ -331,7 +331,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         while t_trial<T_max:
             
             t_episode  += 1
-            t_trial+= 1
+            t_trial += 1
 
             ## place cells (CA3 layer)
             rhos = CA3.firing_rate(pos) #rate inhomogeneous poisson process
@@ -359,14 +359,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             # mean activity u_ca1 about 9e-3
             if theta_bcm == "sliding":
-                dw_ca1 = bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=epsilon_bcm)
+                dw_ca1 += bcm(w_ca1, u_ca1.mean(), rhos, u_ca1, epsilon=epsilon_bcm)
             elif theta_bcm == "super_sliding":
-                dw_ca1 = bcm(w_ca1, (u_ca1**2).mean(), rhos, u_ca1, epsilon=epsilon_bcm)
+                dw_ca1 += bcm(w_ca1, (u_ca1**2).mean(), rhos, u_ca1, epsilon=epsilon_bcm)
             else:
-                dw_ca1 = bcm(w_ca1, theta_bcm, rhos, u_ca1, epsilon=epsilon_bcm)
-                
-            new_weight_buffer = new_weight_buffer + dw_ca1 / 100
-            
+                dw_ca1 += bcm(w_ca1, theta_bcm, rhos, u_ca1, epsilon=epsilon_bcm)
+
+
             #store position (for plotting)
             store_pos[trial, t_trial-1, :] = pos 
 
@@ -478,7 +477,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
                 t_episode = int((np.ceil(t_episode/T_max))*T_max)-1 
                 break
 
-
+        
+        w_ca1 += eta_bcm * dw_ca1
         ## update weights - end of trial
 
         # if the reward is not found, no change (and not Inhib is true)

@@ -3,19 +3,19 @@ import numpy as np
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 42
+random_seed = 455 # 455 for blow ups
 
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
 episodes = 1 # number of agents
-trials = 2 # number of trials for each agent
+trials = 40 # number of trials for each agent
 plot_flag = True
 changepos = False
 Sero = True
 Activ = False # Cyclic serotonin potentiation
 Inhib = False # Cyclic serotonin inhibition
 offset_ca1 = False
-offset_ca3 = False
+offset_ca3 = True
 save_activities = False # Whether to store in the results.pickle file also the activitiy history for the layers. Note: this is very memory consuming, 15GB for about 20 episodes
 save_w_ca1 = True
 save_pos = False
@@ -90,11 +90,12 @@ dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 0.1 # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 0.5 # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 """BCM parameters"""
-theta_bcm = 9e-3 # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
+theta_bcm = 'sliding' # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
 epsilon_bcm = 1e-4 # weight decay strength
+eta_bcm = 1e-3
 
 """ Other parameters"""
 ## Feed-forward weights parameters
