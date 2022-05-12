@@ -200,15 +200,17 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
     store_pos = np.zeros([Trials, T_max,2]) # stores trajectories (for plotting)
     firing_rate_store = np.zeros([N_action, T_max, Trials]) #stores firing rates action neurons (for plotting)
+    firing_rate_store_CA1 = np.zeros([N_pc_ca1, T_max, Trials])
+    firing_rate_store_CA3 = np.zeros([CA3.N, T_max, Trials])
 
     ## initialize plot open field
     if plot_flag:
 
         plt.close()
-        fig, ((ax1, ax2), (ax3, ax4))= plt.subplots(ncols=2, nrows=2, figsize=(8, 8))
+
+        fig, ((ax1, ax2, ax3), (ax4, ax5, ax6))= plt.subplots(ncols=3, nrows=2, figsize=(8, 8))
         fig.subplots_adjust(hspace = 0.5)
 
-        plt.ion()
         #Plot of reward places and initial position
         reward_plot = ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
         ax1.plot(starting_position[0],starting_position[1], 'r',marker='o',markersize=5) #plot initial starting point
@@ -228,11 +230,13 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
         ax1.set_title('Trial 0')
         ax2.set_title('Action neurons firing rates')
-        ax3.set_title('Mean weights')
-        ax4.set_title('Agent''s policy')
+        ax3.set_title('CA1 firing rates')
+        ax4.set_title('CA3 firing rates')
+        ax5.set_title('Mean weights')
+        ax6.set_title('Agent''s policy')
 
-        ax4.set_xlim([pc_ca1.min(),pc_ca1.max()])
-        ax4.set_ylim([pc_ca1.min(),pc_ca1.max()])
+        ax6.set_xlim([pc_ca1.min(),pc_ca1.max()])
+        ax6.set_ylim([pc_ca1.min(),pc_ca1.max()])
 
         plt.pause(0.00001)
 
@@ -335,6 +339,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             ## place cells (CA3 layer)
             rhos = CA3.firing_rate(pos) #rate inhomogeneous poisson process
+            firing_rate_store_CA3[:,t_trial-1,trial] = np.squeeze(rhos)
             ca3_activities.append(rhos)
 
             #turn place cells off after reward is reached
@@ -353,7 +358,8 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             
             X_ca1, last_spike_ca1, Canc_ca1, u_ca1 = neuron_ca1(epsp_ca1, chi, last_spike_ca1, tau_m, rho_pc, theta,
                                                                 delta_u,t_episode, pos, n_x_ca1, n_y_ca1, pc_ca1, sigma_pc_ca1, ca3_scale) #sums EPSP, calculates potential and spikes
-            
+
+            firing_rate_store_CA1[:,t_trial-1,trial] = np.squeeze(u_ca1)
             ca1_activities.append(u_ca1)
             ca1_spikes.append(X_ca1)
 
@@ -414,6 +420,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
 
             # reset after last post-synaptic spike
             X_cut = np.matlib.repmat(np.concatenate((X_ca1,Y_action_neurons)),1,N_action)
+
             X_cut = X_cut*Canc.T
             epsp_rise = epsp_rise*Canc.T
             epsp_decay = epsp_decay*Canc.T
@@ -508,34 +515,49 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             
             ax1.set_title('Trial '+str(trial))
             #display trajectory of the agent in each trial
-            f3 =ax1.plot(store_pos[trial, : ,0], store_pos[trial, : ,1]) #trajectory
+            trajectory = store_pos[trial]
+            trajectory = trajectory[(trajectory[:,0]!=0.)|(trajectory[:,1]!=0.)]
+            f3 = ax1.plot(trajectory[:, 0], trajectory[:,1]) #trajectory
             ax1.plot(starting_position[0],starting_position[1],'r',marker='o',markersize=5) #starting point
 
             #display action neurons firing rates (activity bump)
             pos = ax2.imshow(
                 firing_rate_store[:,:,trial],cmap='Blues', interpolation='none',aspect='auto')
             #colorbar
-            if trial==1:
+            if trial==0:
                 fig.colorbar(pos, ax=ax2)
+
+            pos = ax3.imshow(
+                firing_rate_store_CA1[:,:,trial],cmap='Blues', interpolation='none',aspect='auto')
+            #colorbar
+            if trial==0:
+                fig.colorbar(pos, ax=ax3)
+
+            pos = ax4.imshow(
+                firing_rate_store_CA3[:,:,trial],cmap='Blues', interpolation='none',aspect='auto')
+            #colorbar
+            if trial==0:
+                fig.colorbar(pos, ax=ax4)
+            
+            
+            
             #display weights over the open field, averaged over action neurons
             w_plot = np.mean(w_tot[:,0:N_pc_ca1],axis=0) #use weights as they were at the beginning of the trial
             w_plot = np.reshape(w_plot,(int(np.sqrt(N_pc_ca1)),int(np.sqrt(N_pc_ca1))))
-            pos2 = ax3.imshow(w_plot,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
+            pos2 = ax5.imshow(w_plot,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
             #set(gca,'YDir','normal')
             if trial==1:
-                fig.colorbar(pos2, ax=ax3)
+                fig.colorbar(pos2, ax=ax5)
 
             #plot policy as a vector field
             #filter zero values
             ac_norm=np.max(np.linalg.norm(ac,axis=0))
-            f4=ax4.quiver(pc_ca1[:,0], pc_ca1[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
-            #time.sleep(1.0)
+            f4=ax6.quiver(pc_ca1[:,0], pc_ca1[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
             fig.canvas.draw()
             plt.pause(0.00001)
             f3.pop(0).remove()
             f4.remove()
             pos2.remove()
-            t_end = T_max
 
     activities['ca1'].append(ca1_activities)
     activities['ca3'].append(ca3_activities)
