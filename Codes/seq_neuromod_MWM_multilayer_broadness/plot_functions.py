@@ -3,7 +3,7 @@ import numpy as np
 
 
 def initialize_plots(starting_position, r_goal, bounds_x, bounds_y,
-                     pc_ca1, offset_ca1, offset_ca3, CA3, c):
+                     CA1, offset_ca1, offset_ca3, CA3, c):
         
         plt.close()
 
@@ -21,7 +21,7 @@ def initialize_plots(starting_position, r_goal, bounds_x, bounds_y,
         ax1.plot([bounds_x[1],bounds_x[1]], [bounds_y[0],bounds_y[1]],c='k', ls='--',lw=0.5)
 
 
-        ax1.scatter(pc_ca1[:,0],pc_ca1[:,1], s=1, label="CA1")
+        ax1.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
 
         if offset_ca1!=offset_ca3:
             ax1.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
@@ -34,8 +34,8 @@ def initialize_plots(starting_position, r_goal, bounds_x, bounds_y,
         ax5.set_title('Mean weights')
         ax6.set_title('Agent''s policy')
 
-        ax6.set_xlim([pc_ca1.min(),pc_ca1.max()])
-        ax6.set_ylim([pc_ca1.min(),pc_ca1.max()])
+        ax6.set_xlim([CA1.pc.min(),CA1.pc.max()])
+        ax6.set_ylim([CA1.pc.min(),CA1.pc.max()])
 
         plt.pause(0.00001)
 
@@ -46,7 +46,7 @@ def update_plots(fig, ax1, ax2, ax3, ax4, ax5, ax6,
                  trial, store_pos, starting_position,
                  firing_rate_store, firing_rate_store_CA1,
                  firing_rate_store_CA3, w_tot,
-                 pc_ca1,ac):
+                 CA1,ac):
 
     ax1.set_title('Trial '+str(trial))
     #display trajectory of the agent in each trial
@@ -77,8 +77,8 @@ def update_plots(fig, ax1, ax2, ax3, ax4, ax5, ax6,
     
     
     #display weights over the open field, averaged over action neurons
-    w_plot = np.mean(w_tot[:,0:len(pc_ca1)],axis=0) #use weights as they were at the beginning of the trial
-    w_plot = np.reshape(w_plot,(int(np.sqrt(len(pc_ca1))),int(np.sqrt(len(pc_ca1)))))
+    w_plot = np.mean(w_tot[:,0:CA1.N],axis=0) #use weights as they were at the beginning of the trial
+    w_plot = np.reshape(w_plot,(int(np.sqrt(CA1.N)),int(np.sqrt(CA1.N))))
     pos2 = ax5.imshow(w_plot,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
     #set(gca,'YDir','normal')
     if trial==1:
@@ -87,7 +87,7 @@ def update_plots(fig, ax1, ax2, ax3, ax4, ax5, ax6,
     #plot policy as a vector field
     #filter zero values
     ac_norm=np.max(np.linalg.norm(ac,axis=0))
-    f4=ax6.quiver(pc_ca1[:,0], pc_ca1[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
+    f4=ax6.quiver(CA1.pc[:,0], CA1.pc[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
     fig.canvas.draw()
     plt.pause(0.00001)
     f3.pop(0).remove()
