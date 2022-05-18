@@ -75,10 +75,10 @@ class CA1_layer:
             u = EPSP + self.chi*np.exp(-(time - self.last_spike_time)/self.tau_m)
             lambda_u = self.rho*np.exp((u-self.theta)/self.delta_u)
 
-            return self.alpha*lambda_u + (1-self.alpha)*positional_firing_rate, u
+            return self.alpha*lambda_u + (1-self.alpha)*positional_firing_rate
 
         else:
-            return positional_firing_rate, None
+            return positional_firing_rate
 
 
     def get_spikes(self, firing_rate, time):
@@ -91,3 +91,66 @@ class CA1_layer:
         self.epsp_decay[spikes] = 0
 
         return spikes
+
+
+
+class Action_layer:
+
+    def __init__(self, N,
+                       tau_m, tau_s, eps0,
+                       chi,
+                       rho, theta, delta_u,
+                       tau_gamma, v_gamma,
+                       N_ca1):
+
+        self.N = N
+        self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
+        self.chi = chi
+        self.rho, self.theta, self.delta_u = rho, theta, delta_u
+        self.N_in = N_ca1
+        
+        self.epsp_decay = np.zeros((N_ca1+N,N))
+        self.epsp_rise = np.zeros((N_ca1+N,N))
+        self.epsp_resetter = np.zeros((N_ca1+N,N))
+
+        self.last_spike_time = np.zeros(N) - 1000
+
+        self.tau_gamma, self.v_gamma = tau_gamma, v_gamma
+        self.rho_decay = np.zeros(N)
+        self.rho_rise = np.zeros(N)
+
+        self.Canc = np.ones([N_ca1+N, N])
+        self.last_spike_post=np.zeros([N,1])-1000
+
+
+    def firing_rate(self, spikes, weights, time):
+
+        self.epsp_decay = self.epsp_decay - self.epsp_decay/self.tau_m + np.multiply(spikes,weights.T)
+        self.epsp_rise =  self.epsp_rise  - self.epsp_rise/self.tau_s +  np.multiply(spikes,weights.T)
+
+        EPSP = self.eps0*(self.epsp_decay-self.epsp_rise)/(self.tau_m-self.tau_s)
+        
+        u = EPSP.sum(axis=0, keepdims=True).T + self.chi*np.exp((-time + self.last_spike_post)/self.tau_m)
+        
+        return self.rho*np.exp((u-self.theta)/self.delta_u)
+
+    def get_spikes(self, firing_rate, time):
+        
+        spikes = np.random.rand(self.N) <= np.squeeze(firing_rate) #realization spike train
+        
+        self.last_spike_post[spikes]= time #update time postsyn spike
+        self.Canc = 1-np.matlib.repmat(spikes, self.N_in+self.N, 1)
+
+        self.epsp_decay[:,spikes] = 0
+        self.epsp_rise[:,spikes] = 0
+
+        return spikes
+
+    def compute_instantaneous_firing_rate(self, spikes):
+    
+        self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + spikes
+        self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + spikes
+
+        rho = (self.rho_decay - self.rho_rise)/(self.tau_gamma - self.v_gamma)
+
+        return rho
