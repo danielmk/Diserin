@@ -25,54 +25,13 @@ from parameters import *
 from layers import *
 from plot_functions import *
 
-"""
-DESCRIPTION OF THE OUTPUT OBJECT results (saved as results.pickle)
-
-results is a tuple of two elements
-
-    results[0] is a dict with the name and values of parameters/options used for the simulation
-
-    results[1] is a list of <NUMBER OF EPISODES> elements
-
-        each results[1][i] is a tuple of ? elements, namely:
-
-            [0] integer number, index of the episode (0,1,2,...)
-            [1] array of shape (<NUMBER OF TRIALS>)
-                It is 1 if the trial was rewarding, 0 otherwise 
-            [2] array of shape (<NUMBER OF TRIALS>, 4)
-                Each row refers to one of the trials. Elements 0,1,2,3 of a row refer respectively
-                to the I,II,III,IV quadrant of the space. They are integers and correspond to the
-                number of times that the agent was in that quadrant during the trial (after each move)
-            [3] array of shape (<NUMBER OF TRIALS>)
-                Each element is the median distance of the agent from the center, during the trial
-            [4] array of shape (<NUMBER OF TRIALS>)
-                Each element is the time when the reward was reached (0 if never reached)
-            [5] array of shape (<NUMBER OF TRIALS>)
-                Each element is the time when the reward 2 was first reached 
-                (0 if never reached)
-            [6] array of shape (<NUMBER OF TRIALS>)
-                Each element is the time when the position of reward 1 was reached, but 
-                the reward was moved to position 2
-            [7] array of shape (<NUMBER OF TRIALS>, <T_max>, 2)
-                The position of the agent at each time instant of each trial
-
-            # if save_activities=True
-            [8] MISSING IF , the history of layers' activities 
-
-            # if save_w_ca1=True
-            [9] w_ca1_initial
-            [10] w_ca1
-            [11] w_ca1.mean() history              
-"""
-
-
 def main():
 
     results=[]
 
     if episodes==1:
         
-        results.append(episode_run(jobID, 0,plot_flag,trials,changepos,Sero,
+        results.append(episode_run(jobID, 0,plot_flag,trials, Sero,
                                     eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
                                     tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3))
     else:
@@ -82,7 +41,7 @@ def main():
         for episode in range(0,episodes):
             print('Episode',episode)
 
-            results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,trials,changepos,Sero,
+            results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,trials,Sero,
                                                         eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
                                                         tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3),error_callback=log_e))
             
@@ -107,7 +66,7 @@ def log_e(e):
   print(e)
 
     
-def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_DA,A_Sero,
+def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero,
                 Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3):
 
     # different random seed for each pool
@@ -169,7 +128,7 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     ## initialize plot open field
     if plot_flag:
 
-        fig, ax1, ax2, ax3, ax4, ax5, ax6 = initialize_plots(starting_position, r_goal, bounds_x, bounds_y,
+        fig, ax = initialize_plots(starting_position, r_goal, bounds_x, bounds_y,
                                                              CA1, offset_ca1, offset_ca3, CA3, c)
         fig.show()
 
@@ -194,9 +153,9 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
     #kill connections between place cells on the walls and forbidden actions
     w_walls = np.ones([AC.N, CA1.N+AC.N])
     w_walls_ca1 = np.ones([CA1.N, CA3.N])
-    #for g in range(4):
-    #    idx = list(itertools.product(forbidden_actions[g,:].astype(int).tolist(),sides[g,:].astype(int).tolist()))
-    #    w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
+    for g in range(4):
+        idx = list(itertools.product(forbidden_actions[g,:].astype(int).tolist(),sides[g,:].astype(int).tolist()))
+        w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
 
     # optogenetic ranges
     ranges = [(T_max*Trials/6, 2*T_max*Trials/6), 
@@ -268,7 +227,6 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
             # select action
             a = np.dot(rho, actions.T)/AC.N
             a[np.isnan(a)]=0
-
 
             ## synaptic plasticity
             #Rate-based update
@@ -350,14 +308,14 @@ def episode_run(jobID,episode,plot_flag,Trials,changepos,Sero,eta_DA,eta_Sero,A_
         #calculate policy
         ac =np.dot(np.squeeze(actions),(np.multiply(w_tot_old,w_walls[:,0:CA1.N]))/a0) #vector of preferred actions according to the weights
         ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
-
+        
         ## plot
         if plot_flag:
             
-            update_plots(fig, ax1, ax2, ax3, ax4, ax5, ax6,
+            update_plots(fig, ax,
                          trial, store_pos, starting_position,
                          firing_rate_store, firing_rate_store_CA1,
-                         firing_rate_store_CA3, w_tot,
+                         firing_rate_store_CA3, w_tot, w_ca1,
                          CA1,ac)
 
     returns = (episode, rewarding_trials)
