@@ -3,7 +3,7 @@ import numpy as np
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 455 # 455 for blow ups
+random_seed = 42 # 455 for blow ups
 
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
@@ -11,7 +11,7 @@ episodes = 1 # number of agents
 trials = 40 # number of trials for each agent
 plot_flag = True
 changepos = False
-Sero = True
+Sero = False
 Activ = False # Cyclic serotonin potentiation
 Inhib = False # Cyclic serotonin inhibition
 offset_ca1 = False
@@ -90,7 +90,7 @@ dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 0.5 # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 1. # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 """BCM parameters"""
 theta_bcm = 'sliding' # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used

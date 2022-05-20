@@ -107,9 +107,6 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
     actions = np.squeeze(a0*np.array([np.sin(theta_actor),np.cos(theta_actor)])) #possible actions (x,y)
 
     # feedforward weights
-    w_in = np.ones([CA1.N, AC.N]).T / 5 # initialization feed-forward weights
-    w_in_ca1 = np.random.rand(CA3.N, CA1.N).T
-
     W1 = np.zeros([AC.N, CA1.N]) #initialize unscale trace
 
     W1_sero = np.zeros([AC.N, CA1.N]) #initialize unscale trace
@@ -117,8 +114,9 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
     eligibility_trace_sero = np.zeros([AC.N, CA1.N]) #total convolution
 
     ## initialise variables
-    w_tot = np.concatenate((np.ones([CA1.N,AC.N]).T*w_in,w_lateral),axis=1)#total weigths
-    w_ca1 = np.ones([CA1.N, CA3.N]) * w_in_ca1#total weigths
+    w_in = np.ones([AC.N, CA1.N]) * 2 # initialization feed-forward weights
+    w_tot = np.concatenate([w_in,w_lateral],axis=1)#total weigthsù
+    w_ca1 = np.random.rand(CA1.N, CA3.N) +1 
 
     store_pos = np.zeros([Trials, T_max,2]) # stores trajectories (for plotting)
     firing_rate_store = np.zeros([AC.N, T_max, Trials]) #stores firing rates action neurons (for plotting)
@@ -247,9 +245,9 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
             if ACh_flag:
                 w_tot[0:AC.N,0:CA1.N]= w_tot[0:AC.N,0:CA1.N]-eta_ACh*W
 
-            #weights limited between lower and upper bounds
-            w_tot[np.where(w_tot[:,0:CA1.N]>w_max)] = w_max
-            w_tot[np.where(w_tot[:,0:CA1.N]<w_min)] = w_min
+                #weights limited between lower and upper bounds
+                w_tot[np.where(w_tot[:,0:CA1.N]>w_max)] = w_max
+                w_tot[np.where(w_tot[:,0:CA1.N]<w_min)] = w_min
 
             ## position update
             pos = np.squeeze(pos+a)
@@ -287,7 +285,8 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
                 break
 
         
-        w_ca1 += eta_bcm * dw_ca1
+        if CA1.alpha != 0:
+            w_ca1 += eta_bcm * dw_ca1
         ## update weights - end of trial
 
         # if the reward is not found, no change (and not Inhib is true)

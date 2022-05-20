@@ -59,26 +59,24 @@ def update_plots(fig, ax,
                  'r',marker='o',markersize=5) #starting point
     f3 = ax[0,0].plot(trajectory[:, 0], trajectory[:,1]) #trajectory
     
+    colorbars = []
 
     #display action neurons firing rates (activity bump)
 
     pos = ax[0,3].imshow(
         firing_rate_store_CA3[:,:,trial],origin='lower',cmap='Blues', interpolation='none',aspect='auto')
     #colorbar
-    if trial==0:
-        fig.colorbar(pos, ax=ax[0,3])
+    colorbars.append(fig.colorbar(pos, ax=ax[0,3]))
 
     pos = ax[0,2].imshow(
         firing_rate_store_CA1[:,:,trial],origin='lower',cmap='Blues', interpolation='none',aspect='auto')
     #colorbar
-    if trial==0:
-        fig.colorbar(pos, ax=ax[0,2])
+    colorbars.append(fig.colorbar(pos, ax=ax[0,2]))
 
     pos = ax[0,1].imshow(
         firing_rate_store[:,:,trial],origin='lower',cmap='Blues', interpolation='none',aspect='auto')
     #colorbar
-    if trial==0:
-        fig.colorbar(pos, ax=ax[0,1])
+    colorbars.append(fig.colorbar(pos, ax=ax[0,1]))
     
     # Display policy
     ac_norm=np.max(np.linalg.norm(ac,axis=0))
@@ -86,18 +84,16 @@ def update_plots(fig, ax,
 
     # Display weights
     pos = ax[1,1].imshow(w_ca1,cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
-    if trial==0:
-        fig.colorbar(pos, ax=ax[1,1])
+    colorbars.append(fig.colorbar(pos, ax=ax[1,1]))
     
     pos = ax[1,2].imshow(w_tot[:,0:CA1.N], cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
-    if trial==0:
-        fig.colorbar(pos, ax=ax[1,2])
+    colorbars.append(fig.colorbar(pos, ax=ax[1,2]))
 
     pos = ax[1,3].imshow(w_tot[:,CA1.N:],cmap='Reds_r',origin='lower', interpolation='none',aspect='auto')
-    if trial==0:
-        fig.colorbar(pos, ax=ax[1,3])
+    colorbars.append(fig.colorbar(pos, ax=ax[1,3]))
 
     plt.pause(0.00001)
     f3.pop(0).remove()
     f4.remove()
-    pos.remove()
+    for c in colorbars:
+        c.remove()
