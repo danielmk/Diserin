@@ -3,7 +3,7 @@ import numpy as np
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 42 # 455 for blow ups
+random_seed = 41 # 455 for blow ups
 
 """ Main options """
 jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
@@ -20,11 +20,12 @@ save_activities = False # Whether to store in the results.pickle file also the a
 save_w_ca1 = True
 save_pos = False
 ACh_flag = False #acetylcholine flag if required for comparisons
+walls_punish = False
 
 """ Learning rates """
 eta_DA = 0.01 # Learning rate for dopamine
 eta_Sero = 0.01 # Learning rate for serotonin
-eta_ACh = 10**-3*2 #learning rate acetylcholine (if active)
+eta_ACh = 2e-2 #learning rate acetylcholine (if active)
 
 """STDP parameters"""
 A_DA = 1 # STDP magnitude of dopamine
@@ -51,7 +52,7 @@ T_max = 15*10**3 #maximum time trial
 delay_post_reward = 300
 
 # Reward and agent positions
-starting_position = np.array([0,0]) #starting position
+starting_position = np.array([0.,0.]) #starting position
 c = np.array([-1.5,-1.5]) #centre reward 1
 r_goal = 0.3 # radius goal area
 c2 = np.array([1.5,1.5]) #centre reward 2
@@ -90,7 +91,7 @@ dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 1. # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 0. # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 """BCM parameters"""
 theta_bcm = 'sliding' # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
