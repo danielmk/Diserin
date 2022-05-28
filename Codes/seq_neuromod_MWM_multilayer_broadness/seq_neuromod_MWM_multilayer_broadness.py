@@ -30,9 +30,8 @@ def main():
 
     if episodes==1:
         
-        results.append(episode_run(jobID, 0,plot_flag,trials, Sero,
-                                    eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
-                                    tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3))
+        results.append(episode_run(0))
+
     else:
 
         pool = multiprocessing.Pool(os.cpu_count() - 1)
@@ -40,9 +39,7 @@ def main():
         for episode in range(0,episodes):
             print('Episode',episode)
 
-            results.append(pool.apply_async(episode_run,(jobID,episode,plot_flag,trials,Sero,
-                                                        eta_DA,eta_Sero, A_DA,A_Sero,Activ, Inhib, 
-                                                        tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3),error_callback=log_e))
+            results.append(pool.apply_async(episode_run,(episode,),error_callback=log_e))
             
             current_process = psutil.Process()
             children = current_process.children(recursive=True)
@@ -65,8 +62,7 @@ def log_e(e):
   print(e)
 
     
-def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero,
-                Activ,Inhib,tau_DA,tau_Sero,ca3_scale, offset_ca1, offset_ca3):
+def episode_run(episode):
 
     # different random seed for each pool
     np.random.seed(random_seed + episode)
@@ -75,12 +71,9 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
     ever_rewarded_flag = False
 
     #Results to be exported for each episode
-    rewarding_trials = np.zeros(Trials)
+    rewarding_trials = np.zeros(trials)
     
     print('Initiated episode:',episode)
-
-    t_rew = T_max
-    t_extreme = t_rew + delay_post_reward #time of reward - initialized to maximu
 
     ## Place cells positions
 
@@ -91,32 +84,20 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
 
     AC  = Action_layer(N_action, tau_m, tau_s, eps0, chi,
                        rho0, theta, delta_u, tau_gamma, 
-                       v_gamma, CA1.N)
-
-
-    #winner-take-all weights
-    theta_actor = 2*np.pi*np.arange(1,AC.N+1)/AC.N #angles actions
-    diff_theta = theta_actor - theta_actor.reshape(-1,1)
-    f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
-    np.fill_diagonal(f,0)
-    w_lateral = (w_minus/AC.N+w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
-
-    #actions
-    actions = np.squeeze(a0*np.array([np.cos(theta_actor), np.sin(theta_actor)])) #possible actions (x,y)
+                       v_gamma, CA1.N,
+                       a0, psi, w_minus, w_plus)
     
     # feedforward weights
     trace_tot_sero = np.zeros([AC.N,CA1.N]) #sum of the traces
     eligibility_trace_sero = np.zeros([AC.N, CA1.N]) #total convolution
 
     ## initialise variables
-    w_in = np.ones([AC.N, CA1.N]) * 2 # initialization feed-forward weights
-    w_tot = np.concatenate([w_in,w_lateral],axis=1)#total weigthsù
     w_ca1 = np.random.rand(CA1.N, CA3.N) +1 
 
-    store_pos = np.zeros([Trials, T_max,2]) # stores trajectories (for plotting)
-    firing_rate_store_AC = np.zeros([AC.N, T_max, Trials]) #stores firing rates action neurons (for plotting)
-    firing_rate_store_CA1 = np.zeros([CA1.N, T_max, Trials])
-    firing_rate_store_CA3 = np.zeros([CA3.N, T_max, Trials])
+    store_pos = np.zeros([trials, T_max,2]) # stores trajectories (for plotting)
+    firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
+    firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
+    firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
 
     ## initialize plot open field
     if plot_flag:
@@ -126,40 +107,17 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
         update_plots(fig, ax,
                     0, store_pos, starting_position,
                     firing_rate_store_AC, firing_rate_store_CA1,
-                    firing_rate_store_CA3, w_tot, w_ca1,
-                    CA1, None, theta_actor)
+                    firing_rate_store_CA3, AC.w_lateral, AC.w_ca1, w_ca1,
+                    CA1, None, AC.thetas)
 
-    ## delete actions that lead out of the maze
-
-    #find index place cells that lie on the walls (CA1)
-    sides = np.empty((4,int(np.max([np.sqrt(CA1.N), np.sqrt(CA1.N)]))))
-
-    sides[0,:] = np.where(CA1.pc[:,1] == CA1.pc.min())[0].T #bottom wall, y=-2
-    sides[1,:] = np.where(CA1.pc[:,1] == CA1.pc.max())[0].T #top wall, y=+2
-    sides[2,:] = np.where(CA1.pc[:,0] == CA1.pc.max())[0].T #left wall, x=-2
-    sides[3,:] = np.where(CA1.pc[:,0] == CA1.pc.min())[0].T #right wall, x=+2
-
-    #store index of actions forbidden from each side
-    forbidden_actions = np.empty((4,19))
-    forbidden_actions[0,:] = np.arange(21,40) #actions that point south - theta in (180, 360) degrees approx
-    forbidden_actions[1,:] = np.arange(1,20) #actions that point north - theta in (0,180) degrees approx
-    forbidden_actions[2,:] = np.concatenate([np.arange(1,10), np.arange(31,41)]) #actions that point east - theta in (-90, 90) degrees approx
-    forbidden_actions[3,:] = np.arange(11,30)#actions that point west - theta in (90, 270) degrees approx
-    
-    #kill connections between place cells on the walls and forbidden actions
-    w_walls = np.ones([AC.N, CA1.N+AC.N])
-    for g in range(4):
-        idx = list(itertools.product(forbidden_actions[g,:].astype(int).tolist(),sides[g,:].astype(int).tolist()))
-        w_walls[np.array(idx)[:,0]-1,np.array(idx)[:,1]] = 0
-
-    
+        fig.show()
+          
     
     ######################## START SIMULATION ######################################
-    w_tot_old = w_tot[0:AC.N,0:CA1.N] #store weights before start
     
     t_episode = 0 # counter ms
 
-    for trial in range(Trials):
+    for trial in range(trials):
 
         position = starting_position.copy() #initialize position at origin (centre open field)
         rew_found = 0 #flag that signals when the reward is found
@@ -191,34 +149,25 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
             ## CA1 Layer
             CA1.update_activity(position, CA3.spikes, w_ca1, t_episode)
 
-            # BCM update
+            ## Action neurons
+            AC.update_activity(CA1.spikes, t_episode)
+
+            # select action
+            a = np.dot(AC.instantaneous_firing_rates, AC.actions.T)/AC.N
+
+            ## synaptic plasticity
+
+            # BCM
             if CA1.alpha!=0:
 
                 dw_ca1 += bcm(w_ca1, CA1.firing_rates.mean(), 
                               CA3.firing_rates, CA1.firing_rates, epsilon=epsilon_bcm)
 
-            ## action neurons
-        
-            AC.update_activity(CA1.spikes, w_tot*w_walls, t_episode)
-
-            # select action
-            a = np.dot(AC.instantaneous_firing_rates, actions.T)/AC.N
-
-            ## synaptic plasticity
-
             W, eligibility_trace, trace_tot = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot, tau_e)
 
             #STDP with unsymmetric window and depression due to serotonin
-            if Sero:
+            if Serotonine:
                 W_sero, eligibility_trace_sero, trace_tot_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot_sero, tau_e_sero)
-
-            # online weights update (effective only with acetylcholine - ACh_flag=1)
-            if ACh_flag:
-                w_tot[0:AC.N,0:CA1.N]= w_tot[0:AC.N,0:CA1.N]-eta_ACh*W
-
-                #weights limited between lower and upper bounds
-                w_tot[np.where(w_tot[:,0:CA1.N]>w_max)] = w_max
-                w_tot[np.where(w_tot[:,0:CA1.N]<w_min)] = w_min
 
             ## position update
             position += a
@@ -235,15 +184,15 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
             else:
                 wall_hit = False
             
-            if walls_punish and wall_hit:
-                w_tot[0:AC.N,0:CA1.N]= w_tot[0:AC.N,0:CA1.N]-eta_ACh*W
+            if Acetylcholine and wall_hit:
+                
+                AC.update_weights(-eta_ACh*W)
             
             ## reward
 
             if  rew_found==0 and np.sum((position-c)**2)<=r_goal**2:
 
                 rew_found=1 #flag reward found (so that trial is ended soon)
-                t_rew=t_trial #time of reward
                 rewarding_trials[trial] = 1
                 
                 if not ever_rewarded_flag:
@@ -251,36 +200,24 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
                     ever_rewarded_flag = True
                     print('First reward,episode',episode,'trial', trial)
 
-            #time when trial end is 300ms after reward is found
-            t_extreme = t_rew+delay_post_reward
-
-            if t_trial>t_extreme and t_trial<T_max:
-                t_episode = int((np.ceil(t_episode/T_max))*T_max)-1 
                 break
 
-        
-        if CA1.alpha != 0:
-            w_ca1 += eta_bcm * dw_ca1
         ## update weights - end of trial
 
-        # if the reward is not found, no change (and not Inhib is true)
+        if CA1.alpha != 0:
+            w_ca1 += eta_bcm * dw_ca1
+
         # change due to serotonin or dopamine
-        if Sero:
-            w_tot[0:AC.N,0:CA1.N]= (w_tot_old+eta_DA*eligibility_trace)*rew_found + (w_tot_old-eta_Sero*eligibility_trace_sero)*(1-rew_found)*(not Inhib)
-        else:
-            #change due to dopamine or sustained weights at the end of the trial
-            w_tot[0:AC.N,0:CA1.N]=w_tot[0:AC.N,0:CA1.N]*(1-rew_found)+(w_tot_old+eta_DA*eligibility_trace)*rew_found
+        if Dopamine and rew_found:
 
-        #weights limited between lower and upper bounds
-        w_tot[np.where(w_tot[:,0:CA1.N]>w_max)]=w_max
-        w_tot[np.where(w_tot[:,0:CA1.N]<w_min)]=w_min
+            AC.update_weights(eta_DA*eligibility_trace)
 
-        #store weights before the beginning of next trial (for updates in case reward is found)
-        w_tot_old = np.copy(w_tot[0:AC.N,0:CA1.N])
+        if Serotonine and not rew_found:
+
+            AC.update_weights(-eta_Sero*eligibility_trace_sero)
 
         #calculate policy
-        ac =np.dot(np.squeeze(actions),(np.multiply(w_tot_old,w_walls[:,0:CA1.N]))/a0) #vector of preferred actions according to the weights
-        ac[:,np.unique(np.sort(np.reshape(sides, (np.max(sides.shape)*4, 1),order='F'))).astype(int).tolist()]=0 #do not count actions AT the boundaries (just for plotting)
+        ac =np.dot(AC.actions, AC.w_ca1)/a0 #vector of preferred actions according to the weights
         
         ## plot
         if plot_flag:
@@ -288,8 +225,8 @@ def episode_run(jobID,episode,plot_flag,Trials,Sero, eta_DA,eta_Sero,A_DA,A_Sero
             update_plots(fig, ax,
                          trial, store_pos, starting_position,
                          firing_rate_store_AC, firing_rate_store_CA1,
-                         firing_rate_store_CA3, w_tot, w_ca1,
-                         CA1,ac, theta_actor)
+                         firing_rate_store_CA3, AC.w_lateral, AC.w_ca1, w_ca1,
+                         CA1,ac, AC.thetas)
 
     returns = (episode, rewarding_trials)
 

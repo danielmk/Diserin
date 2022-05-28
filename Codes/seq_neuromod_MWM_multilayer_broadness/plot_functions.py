@@ -60,7 +60,7 @@ def initialize_plots(r_goal, bounds_x, bounds_y,
 def update_plots(fig, ax,
                  trial, store_pos, starting_position,
                  firing_rate_store_AC, firing_rate_store_CA1,
-                 firing_rate_store_CA3, w_tot, w_ca1,
+                 firing_rate_store_CA3, w_lateral, w_ca1, w_ca3,
                  CA1,ac, theta_actor):
 
     
@@ -97,15 +97,15 @@ def update_plots(fig, ax,
         f4 = ax[1,0].quiver(CA1.pc[:,0], CA1.pc[:,1], ac[0,:].T/ac_norm, ac[1,:].T/ac_norm)
 
     # Display weights
-    cb = make_weights_plot(fig, ax[1,1], w_ca1)
+    cb = make_weights_plot(fig, ax[1,1], w_ca3)
     colorbars.append(cb)
 
-    cb = make_weights_plot(fig, ax[1,2], w_tot[:,0:CA1.N])
+    cb = make_weights_plot(fig, ax[1,2], w_ca1)
     colorbars.append(cb)
     ax[1,2].set_yticks(ticks)
     ax[1,2].set_yticklabels(action_degree)
 
-    cb = make_weights_plot(fig, ax[1,3], w_tot[:,CA1.N:])
+    cb = make_weights_plot(fig, ax[1,3], w_lateral)
     colorbars.append(cb)
     ax[1,3].set_yticks(ticks)
     ax[1,3].set_yticklabels(action_degree)
@@ -116,8 +116,10 @@ def update_plots(fig, ax,
     for c in colorbars:
         c.ax.locator_params(nbins=5)
 
-    plt.pause(0.00001)
+    plt.pause(0.0001)
+
     f3.pop(0).remove()
+
     if ac is not None:
         f4.remove()
     for c in colorbars:

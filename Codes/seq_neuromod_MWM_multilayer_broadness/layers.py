@@ -131,7 +131,8 @@ class Action_layer:
                        chi,
                        rho, theta, delta_u,
                        tau_gamma, v_gamma,
-                       N_ca1):
+                       N_ca1,
+                       a0, psi, w_minus, w_plus):
 
         self.N = N
         self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
@@ -155,12 +156,28 @@ class Action_layer:
         self.spikes = np.zeros(self.N)
         self.instantaneous_firing_rates = np.zeros(self.N)
 
-    def update_activity(self, spikes_ca1, weights, time):
+        # Actions
+        self.thetas = 2*np.pi*np.arange(1,N+1)/N
+        self.actions = a0*np.array([np.cos(self.thetas), np.sin(self.thetas)]) #possible actions (x,y)
+        
+        # Lateral Connections
+        diff_theta = self.thetas - self.thetas.reshape(-1,1)
+        f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
+        np.fill_diagonal(f,0)
+        self.w_lateral = (w_minus/N+w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
+
+        #CA1 connections
+        self.w_ca1 = np.ones((N, N_ca1))*2
+        
+
+    def update_activity(self, spikes_ca1, time):
         
         cat_spikes = np.concatenate([spikes_ca1, self.spikes])
+        cat_weights = np.concatenate([self.w_ca1, self.w_lateral], axis=1)
 
-        self.epsp_decay = self.epsp_decay - self.epsp_decay/self.tau_m + np.multiply(cat_spikes,weights)
-        self.epsp_rise =  self.epsp_rise  - self.epsp_rise/self.tau_s +  np.multiply(cat_spikes,weights)
+
+        self.epsp_decay = self.epsp_decay - self.epsp_decay/self.tau_m + np.multiply(cat_spikes,cat_weights)
+        self.epsp_rise =  self.epsp_rise  - self.epsp_rise/self.tau_s +  np.multiply(cat_spikes,cat_weights)
 
         EPSP = self.eps0*(self.epsp_decay-self.epsp_rise)/(self.tau_m-self.tau_s)
         
@@ -185,3 +202,7 @@ class Action_layer:
         self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
 
         self.instantaneous_firing_rates = (self.rho_decay - self.rho_rise)/(self.tau_gamma - self.v_gamma)
+
+    def update_weights(self, update):
+
+        self.w_ca1 += update
