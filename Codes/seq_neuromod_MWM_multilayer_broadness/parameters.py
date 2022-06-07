@@ -3,7 +3,7 @@ import numpy as np
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 2 # 455 for blow ups
+random_seed = 4
 
 """ Main options """
 
@@ -11,18 +11,29 @@ jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
 episodes = 1 # number of agents
 trials = 40 # number of trials for each agent
 plot_flag = True
+save_activity = False
+BCM_ON = False
+save_thetas = BCM_ON and True
 
-Dopamine = False
+
+Dopamine = True
 Serotonine = False
-Acetylcholine = False
+Acetylcholine = True
 
 offset_ca1 = False
-offset_ca3 = True
+offset_ca3 = False
+
+"""Weights boundaries"""
+w_min_ca1 = 0
+w_max_ca1 = 3
+
+w_max = 3
+w_min = 1
 
 """ Learning rates """
-eta_DA = 0.01 # Learning rate for dopamine
+eta_DA = 0.02 # Learning rate for dopamine
 eta_Sero = 0.01 # Learning rate for serotonin
-eta_ACh = 0.1 #learning rate acetylcholine (if active)
+eta_ACh = 0.01 #learning rate acetylcholine (if active)
 
 """STDP parameters"""
 A_DA = 1 # STDP magnitude of dopamine
@@ -52,13 +63,23 @@ starting_position = np.array([0.,0.]) #starting position
 c = np.array([-1.5,-1.5]) #centre reward 1
 r_goal = 0.3 # radius goal area
 
-# Space cells parameters
+"""Space cells parameters"""
 space_pc = 0.4 #place cells separation distance
 bounds_x = np.array([-2,2]) #bounds open field, x axis
 bounds_y = np.array([-2,2]) #bounds open field, y axis
 rho_pc= 0.4 #maximum firing rate place cells, according to Poisson
 sigma_pc_ca3 = 0.4
 sigma_pc_ca1 = 0.4 # (increase this for broadness)
+
+
+"""CA1 parameters"""
+eps0_ca1 = 20*5
+tau_m_ca1 = 20
+tau_s_ca1 = 5
+chi_ca1 = -5/10
+rho0_ca1 = 0.06#scaling rate
+theta_ca1 = 16
+delta_u_ca1 = 2 #    /20 with the identity
 
 
 """ Action neurons parameters"""
@@ -71,26 +92,29 @@ theta = 16 #threshold
 delta_u = 2 #escape noise
 N_action = 40 #number action neurons
 
+weight_decay_ac = 0.
+base_weight_ac = 2.
+
 # action selection
 tau_gamma = 50 #raise time convolution action selection
 v_gamma = 20 #decay time convolution action selection
-
 psi = 20 # the higher, the more narrow the range of excitation
 w_minus = -300 # (consider decreasing it)
 w_plus = 100
 
 a0=.08 # action?
-
 dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 0. # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
+
 
 """BCM parameters"""
-theta_bcm = 'sliding' # double, the value of bcm threshold. You could also put the string "sliding", and mean activity of u_ca1 would be used
-epsilon_bcm = 1e-4 # weight decay strength
-eta_bcm = 1e-3
+memory_factor = 0.99
+weight_decay = 0. #1e-3
+base_weight = 2.
+eta_bcm = 1e-1
 
 """ Dict with all previous parameters, for saving configuration """
 # collect all global variables in a dict
