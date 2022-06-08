@@ -23,13 +23,15 @@ class BCM:
 
         x = x.reshape(1,-1)
         y = y.reshape(-1, 1)
-
         thetas = self.thetas.reshape(-1,1)
 
-        decay = weights - self.base_weight
-        decay = np.where(decay>0, decay, 0)
+        dW = y*(y-thetas)*x 
 
-        dW = y*(y-thetas)*x - self.weight_decay * decay
+        if self.weight_decay!=0:
+
+            decay = weights - self.base_weight
+            decay = np.where(decay>0, decay, 0)
+            dW -= self.weight_decay * decay
 
         return dW
 
@@ -117,7 +119,7 @@ class CA1_layer:
 
         # weights
         #self.w_ca3 = np.random.rand(self.N, N_ca3)*2 + 1
-        self.w_ca3 = 2*self.convolutional_initialization(sigma=0.7)
+        self.w_ca3 = self.convolutional_initialization(sigma=0.7)
         #np.ones((self.N, N_ca3))*2 
         #self.w_ca3 = np.eye(self.N)
         self.w_min = w_min
@@ -156,7 +158,7 @@ class CA1_layer:
 
         self.w_ca3 += update
 
-        self.w_ca3 = np.clip(self.w_ca3, 0, self.w_max)
+        self.w_ca3 = np.clip(self.w_ca3, self.w_min, self.w_max)
 
     
     def convolutional_initialization(self, sigma = 1.):

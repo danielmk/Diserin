@@ -90,6 +90,8 @@ def episode_run(episode):
     firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
     firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
     firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
+    initial_weights = {'CA1': CA1.w_ca3.copy(),
+                        'AC': AC.w_ca1.copy()}
 
     ## initialize plot open field
     if plot_flag:
@@ -236,7 +238,10 @@ def episode_run(episode):
     returns = { 'episode':episode,  
                 'rewarding_trials':rewarding_trials, 
                 'rewarding_times': rewarding_times,
-                'trajectories': store_pos }
+                'trajectories': store_pos,
+                'initial_weights': initial_weights,
+                'final_weights': {'CA1': CA1.w_ca3,
+                                  'AC' : AC.w_ca1}}
     
     if save_activity:
 

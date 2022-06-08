@@ -12,7 +12,7 @@ episodes = 1 # number of agents
 trials = 40 # number of trials for each agent
 plot_flag = True
 save_activity = False
-BCM_ON = False
+BCM_ON = True
 save_thetas = BCM_ON and True
 
 
@@ -112,7 +112,7 @@ ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 """BCM parameters"""
 memory_factor = 0.99
-weight_decay = 0. #1e-3
+weight_decay = 0.
 base_weight = 2.
 eta_bcm = 1e-1
 
