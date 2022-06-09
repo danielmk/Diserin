@@ -1,3 +1,4 @@
+from pickletools import optimize
 import numpy as np
 
 
@@ -85,7 +86,8 @@ class CA1_layer:
                        theta, delta_u,
                        alpha,
                        N_ca3,
-                       w_min, w_max):
+                       w_min, w_max,
+                       w_ca1_init, max_init, sigma_init):
 
         self.rho_pc, self.sigma = rho_pc, sigma
 
@@ -118,12 +120,11 @@ class CA1_layer:
         self.firing_rates = np.zeros(self.N)
 
         # weights
-        #self.w_ca3 = np.random.rand(self.N, N_ca3)*2 + 1
-        self.w_ca3 = self.convolutional_initialization(sigma=0.7)
-        #np.ones((self.N, N_ca3))*2 
-        #self.w_ca3 = np.eye(self.N)
         self.w_min = w_min
         self.w_max = w_max
+        self.w_ca3 = self._initilialize_weights(w_ca1_init, max_init, sigma_init)
+
+        
 
     def update_activity(self, pos, spikes, time):
 
@@ -161,7 +162,7 @@ class CA1_layer:
         self.w_ca3 = np.clip(self.w_ca3, self.w_min, self.w_max)
 
     
-    def convolutional_initialization(self, sigma = 1.):
+    def _convolutional_initialization(self, maximum, sigma):
 
         # weights shape (N_out, N_in)
         N_size = int(np.sqrt(self.N))
@@ -182,9 +183,30 @@ class CA1_layer:
                 x, y = np.meshgrid(np.linspace(0,4,K_size), np.linspace(0,4,K_size))
                 dst = np.sqrt((x- step/2 -j*step)**2+(y- step/2 - i*step)**2)
 
-                weights[i,j] =  2.5*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
+                weights[i,j] =  maximum*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
 
         return weights.reshape(self.N, self.N_in)
+
+    def _initilialize_weights(self, option, max_init, sigma_init):
+
+        if option == 'convolutional':
+            return self._convolutional_initialization(max_init, sigma_init)
+
+        if option == 'all_ones':
+            return np.ones((self.N, self.N_in))
+        
+        if option == 'random':
+            return np.random.rand(self.N, self.N_in) 
+
+        if option =='identity':
+            return np.eye(self.N)
+        
+
+    def update_activity_simple_mode(self, rates_ca3):
+
+        self.firing_rates = np.einsum('ij, j -> i', self.w_ca3, rates_ca3)
+        self.firing_rates = self.firing_rates/self.firing_rates.max()*0.4
+        self.spikes = np.random.rand(self.N) <= self.firing_rates
 
 
 

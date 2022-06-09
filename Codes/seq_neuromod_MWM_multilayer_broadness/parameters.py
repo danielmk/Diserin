@@ -1,9 +1,10 @@
+from tkinter import FALSE
 import numpy as np
 
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 4
+random_seed = 42
 
 """ Main options """
 
@@ -24,9 +25,6 @@ offset_ca1 = False
 offset_ca3 = False
 
 """Weights boundaries"""
-w_min_ca1 = 0
-w_max_ca1 = 3
-
 w_max = 3
 w_min = 1
 
@@ -59,7 +57,7 @@ tau_e_sero= 5*10**3 #time constant eligibility trace for serotonin
 T_max = 15*10**3 #maximum time trial
 
 # Reward and agent positions
-starting_position = np.array([0.,0.]) #starting position
+starting_position_option = 'random' # option: 'origin', 'random'
 c = np.array([-1.5,-1.5]) #centre reward 1
 r_goal = 0.3 # radius goal area
 
@@ -67,12 +65,21 @@ r_goal = 0.3 # radius goal area
 space_pc = 0.4 #place cells separation distance
 bounds_x = np.array([-2,2]) #bounds open field, x axis
 bounds_y = np.array([-2,2]) #bounds open field, y axis
-rho_pc= 0.4 #maximum firing rate place cells, according to Poisson
+rho_pc = 0.4 #maximum firing rate place cells, according to Poisson
 sigma_pc_ca3 = 0.4
 sigma_pc_ca1 = 0.4 # (increase this for broadness)
 
 
 """CA1 parameters"""
+# Weights
+w_min_ca1 = -5
+w_max_ca1 = 3
+
+w_ca1_init = 'convolutional' # option: 'convolutional', 'uniform', 'identity'
+max_init = 2.5 # needed just with convolutional opiton
+sigma_init = 1.2 # needed just with convolutional opiton
+
+# SRM0
 eps0_ca1 = 20*5
 tau_m_ca1 = 20
 tau_s_ca1 = 5
@@ -114,7 +121,7 @@ ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
 memory_factor = 0.99
 weight_decay = 0.
 base_weight = 2.
-eta_bcm = 1e-1
+eta_bcm = 1e-2
 
 """ Dict with all previous parameters, for saving configuration """
 # collect all global variables in a dict

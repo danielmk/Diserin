@@ -145,8 +145,9 @@ def update_plots(fig, trial, store_pos, starting_position,
     trajectory = store_pos[trial]
     trajectory = trajectory[(trajectory[:,0]!=0.)|(trajectory[:,1]!=0.)]
     
-    ax0.plot(starting_position[0],starting_position[1],
-             'r',marker='o',markersize=5) 
+    if starting_position is not None:
+        ax0.plot(starting_position[0],starting_position[1],
+                'r',marker='o',markersize=5) 
 
     F1 = ax0.plot(trajectory[:, 0], trajectory[:,1])
     

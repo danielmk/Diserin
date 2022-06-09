@@ -21,6 +21,19 @@ from parameters import *
 from layers import *
 from plot_functions import *
 
+def get_starting_position(starting_position_option):
+
+    if starting_position_option=='origin':
+
+        return np.array([0.,0.])
+
+    if starting_position_option=='random':
+
+        return np.random.rand(2)*4 - 2
+
+    print("Starting position option non valid!")
+    exit()
+
 def main():
 
     results=[]
@@ -75,7 +88,7 @@ def episode_run(episode):
 
     CA1 = CA1_layer(bounds_x, bounds_y, space_pc, offset_ca1, rho_pc, sigma_pc_ca1,
                     tau_m_ca1, tau_s_ca1, eps0_ca1, chi_ca1, rho0_ca1, theta_ca1, delta_u_ca1, ca3_scale, CA3.N,
-                    w_min_ca1, w_max_ca1)
+                    w_min_ca1, w_max_ca1, w_ca1_init, max_init, sigma_init)
 
     AC  = Action_layer(N_action, tau_m, tau_s, eps0, chi,
                        rho0, theta, delta_u, tau_gamma, 
@@ -107,7 +120,7 @@ def episode_run(episode):
         else:
             ac = (1-CA1.alpha)*np.dot(AC.actions, AC.w_ca1)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
 
-        update_plots(fig, 0, store_pos, starting_position,
+        update_plots(fig, 0, store_pos, None,
                      firing_rate_store_AC, firing_rate_store_CA1,
                      firing_rate_store_CA3, CA3, CA1, AC, ac)
         fig.show()
@@ -122,7 +135,9 @@ def episode_run(episode):
 
     for trial in range(trials):
 
-        position = starting_position.copy() 
+        starting_position = get_starting_position(starting_position_option)
+
+        position = starting_position.copy()
         rew_found = 0
         t_trial = 0
 
