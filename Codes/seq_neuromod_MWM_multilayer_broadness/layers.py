@@ -13,7 +13,7 @@ class BCM:
 
         self.thetas = None
 
-    def get_update(self, x, y, weights):
+    def get_update(self, x, y, weights, use_sum=False):
         """
         x is the pre-synaptic activity
         y is the post-synaptic acitivity
@@ -26,8 +26,13 @@ class BCM:
             self.thetas = current_thetas
         
         else:
-            
+
             self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
+
+
+        if use_sum:
+            
+            y = np.dot(weights, x)
 
         x = x.reshape(1,-1)
         y = y.reshape(-1, 1)

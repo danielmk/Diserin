@@ -131,8 +131,6 @@ def episode_run(episode):
     
     t_episode = 0 # counter ms
 
-    thetas_history = np.empty((trials*T_max, 5))
-
     for trial in range(trials):
 
         starting_position = get_starting_position(starting_position_option)
@@ -173,10 +171,8 @@ def episode_run(episode):
             # BCM
             if CA1.alpha!=0. and BCM_ON:
                 
-                update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3)
+                update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3, use_sum=False)
                 CA1.update_weights(eta_bcm * update)
-
-                thetas_history[t_episode] = bcm.thetas[np.random.randint(0,100)]
 
             W, eligibility_trace, trace_tot = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot, tau_e)
 
@@ -263,10 +259,6 @@ def episode_run(episode):
                                  'CA1': firing_rate_store_CA1,
                                  'AC': firing_rate_store_AC}
     
-    if save_thetas:
-
-        returns['thetas'] = thetas_history
-
     return returns
      
 if __name__ == '__main__':

@@ -14,8 +14,6 @@ trials = 40 # number of trials for each agent
 plot_flag = True
 save_activity = False
 BCM_ON = True
-save_thetas = BCM_ON and True
-
 
 Dopamine = True
 Serotonine = False
