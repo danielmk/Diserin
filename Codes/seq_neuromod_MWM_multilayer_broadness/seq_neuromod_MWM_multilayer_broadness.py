@@ -147,6 +147,12 @@ def episode_run(episode):
 
         print('Episode:', episode, 'Trial:', trial, flush=True)
 
+        #temp_neuron = 104
+        #temp_thetas = []
+        #temp_activity = []
+        #temp_activity_original = []
+        #temp_correction = []
+
         for t_trial in tqdm(range(T_max)):
 
             # store variables for plotting/saving
@@ -173,6 +179,11 @@ def episode_run(episode):
                 
                 update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3, use_sum=False)
                 CA1.update_weights(eta_bcm * update)
+
+                #temp_thetas.append(bcm.thetas[temp_neuron])
+                #temp_activity.append(act[temp_neuron])
+                #temp_activity_original.append(CA1.firing_rates[temp_neuron])
+                #temp_correction.append(update[temp_neuron])
 
             W, eligibility_trace, trace_tot = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot, tau_e)
 
@@ -219,6 +230,19 @@ def episode_run(episode):
             t_episode  += 1
 
         ## update weights - end of trial
+
+        #input("press enter to continue")
+        #plt.ion()
+        #figa, axa = plt.subplots(2,2, figsize=(20,20))
+        #axa[0,0].plot(temp_thetas,  'o--', linewidth=0.5, markersize=1)
+        #axa[0,0].set_title('BCM Threshold (memory factor={})'.format(bcm.memory_factor))
+        #axa[0,1].plot(temp_activity,  'o--', linewidth=0.5, markersize=1)
+        #axa[0,1].set_title(r'$\sum w_{ij} \lambda_j^{CA3}$')
+        #axa[1,0].plot(temp_activity_original, 'o--', linewidth=0.5, markersize=1)
+        #axa[1,0].set_title('Activity with SRM0')
+        #axa[1,1].plot(temp_correction)
+        #axa[1,1].set_title('Updates')
+        #figa.show()
 
         # change due to serotonin or dopamine
         if Dopamine and rew_found:

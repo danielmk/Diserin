@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from parameters import *
 
 def make_firing_rates_plot(ax, rates):
 
@@ -19,15 +20,12 @@ def make_action_weights_plot(ax,weights):
 
   subfig = ax.get_figure()
   subplots = subfig.subplots(num_images, num_images)
-  
-  v_min = weights.min()
-  v_max = weights.max()
 
   for i, sp in enumerate(subplots.reshape(-1)):
 
       sp.axis('off')
       image = weights[i].reshape(-1, image_side)
-      im = sp.imshow(image, cmap = 'bwr', vmin=v_min, vmax=v_max, origin='lower')
+      im = sp.imshow(image, cmap = 'bwr', vmin=w_min, vmax=w_max, origin='lower')
 
   fig = ax.get_figure()
   fig.subplots_adjust(right=0.8)
@@ -47,15 +45,12 @@ def make_weights_plot(ax, weights):
 
   subfig = ax.get_figure()
   subplots = subfig.subplots(num_images, num_images)
-  
-  v_min = weights.min()
-  v_max = weights.max()
 
   for i, sp in enumerate(subplots.reshape(-1)):
 
       sp.axis('off')
       image = weights[i].reshape(-1, image_side)
-      im = sp.imshow(image, cmap = 'Blues', vmin=v_min, vmax=v_max, origin='lower')
+      im = sp.imshow(image, cmap = 'Blues', vmin=w_min_ca1, vmax=w_max_ca1, origin='lower')
 
   fig = ax.get_figure()
   fig.subplots_adjust(right=0.8)
@@ -105,6 +100,7 @@ def initialize_plots(r_goal, bounds_x, bounds_y,
         ax0.plot([bounds_x[0],bounds_x[0]], [bounds_y[0],bounds_y[1]],c='k', ls='--',lw=0.5)
         ax0.plot([bounds_x[1],bounds_x[1]], [bounds_y[0],bounds_y[1]],c='k', ls='--',lw=0.5)
         ax0.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
+        #ax0.scatter(CA1.pc[104,0],CA1.pc[104,1], s=140, facecolors='none', edgecolors='r')
         if offset_ca1!=offset_ca3:
             ax0.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
 
