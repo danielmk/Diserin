@@ -16,6 +16,7 @@ from bisect import bisect
 import multiprocessing
 import pickle
 import psutil
+from tqdm import tqdm
 
 from parameters import *
 from layers import *
@@ -130,7 +131,6 @@ def episode_run(episode):
     
     t_episode = 0 # counter ms
 
-
     thetas_history = np.empty((trials*T_max, 5))
 
     for trial in range(trials):
@@ -147,9 +147,9 @@ def episode_run(episode):
         trace_tot_sero = np.zeros([AC.N,CA1.N]) #sum of the traces
         eligibility_trace_sero = np.zeros([AC.N, CA1.N]) #total convolution
 
-        print('Episode:', episode, 'Trial:', trial)
+        print('Episode:', episode, 'Trial:', trial, flush=True)
 
-        while t_trial<T_max:
+        for t_trial in tqdm(range(T_max)):
 
             # store variables for plotting/saving
             store_pos[trial, t_trial, :] = position 
@@ -220,7 +220,6 @@ def episode_run(episode):
 
                 break
 
-            t_trial += 1
             t_episode  += 1
 
         ## update weights - end of trial
