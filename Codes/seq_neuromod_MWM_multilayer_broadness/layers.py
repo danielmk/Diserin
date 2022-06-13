@@ -11,7 +11,7 @@ class BCM:
         self.base_weight = base_weight
         self.memory_factor = memory_factor
 
-        self.thetas = np.zeros(N)
+        self.thetas = None
 
     def get_update(self, x, y, weights):
         """
@@ -20,7 +20,14 @@ class BCM:
         """
         
         current_thetas = self.compute_thetas(y)
-        self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
+        
+        if self.thetas is None:
+
+            self.thetas = current_thetas
+        
+        else:
+            
+            self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
 
         x = x.reshape(1,-1)
         y = y.reshape(-1, 1)
