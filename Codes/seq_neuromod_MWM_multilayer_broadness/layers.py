@@ -176,35 +176,38 @@ class CA1_layer:
         self.w_ca3 = np.clip(self.w_ca3, self.w_min, self.w_max)
 
     
-    def _convolutional_initialization(self, maximum, sigma):
+    def _convolutional_initialization(self, maximum, sigma, gaus):
 
-        # weights shape (N_out, N_in)
-        N_size = int(np.sqrt(self.N))
-        K_size = int(np.sqrt(self.N_in))
+        weights = np.zeros((self.N, self.N_in))
 
-        if N_size != K_size:
-            print("Convolutional initialization is implemented only for N_ca1 = N_ca3.")
-            exit()
+        assert self.N == self.N_in
 
-        weights = np.empty((N_size, N_size, K_size, K_size))
+        for i in range(self.N):
 
-        step = 4./K_size
+            for j in range(self.N_in):
 
-        for i in range(N_size):
-            
-            for j in range(N_size):
-                
-                x, y = np.meshgrid(np.linspace(0,4,K_size), np.linspace(0,4,K_size))
-                dst = np.sqrt((x- step/2 -j*step)**2+(y- step/2 - i*step)**2)
+                dst = np.sqrt(((self.pc[i] - self.pc[j])**2).sum())
 
-                weights[i,j] =  maximum*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
+                if gaus==True:
 
-        return weights.reshape(self.N, self.N_in)
+                    weights[i,j] =  maximum*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
+
+                else:
+
+                    if dst<sigma:
+
+                        weights[i,j] = maximum*np.random.rand()
+
+        return weights
+
 
     def _initilialize_weights(self, option, max_init, sigma_init):
 
         if option == 'convolutional':
-            return self._convolutional_initialization(max_init, sigma_init)
+            return self._convolutional_initialization(max_init, sigma_init, gaus=True)
+
+        if option == 'uniform-convolutional':
+            return self._convolutional_initialization(max_init, sigma_init, gaus=False)
 
         if option == 'all_ones':
             return np.ones((self.N, self.N_in))
