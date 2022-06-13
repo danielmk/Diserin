@@ -158,8 +158,10 @@ class CA1_layer:
         
 
         self.firing_rates = self.alpha*lambda_u + (1-self.alpha)*positional_firing_rate
-        #self.firing_rates += (-0.1*self.firing_rates + 0.5*(self.w_ca3*spikes).sum(axis=1))
-        self.firing_rates = self.firing_rates/self.firing_rates.max()*0.4
+
+        if self.firing_rates.max()>0.4:
+            self.firing_rates = self.firing_rates/self.firing_rates.max()*0.4
+
         self.spikes = np.random.rand(self.N) <= self.firing_rates
     
         self.last_spike_time[self.spikes] = time
