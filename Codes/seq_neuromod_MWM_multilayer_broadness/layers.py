@@ -18,6 +18,10 @@ class BCM:
         x is the pre-synaptic activity
         y is the post-synaptic acitivity
         """
+    
+        if use_sum:
+        
+            y = np.dot(weights, x)
         
         current_thetas = self.compute_thetas(y)
         
@@ -28,11 +32,6 @@ class BCM:
         else:
 
             self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
-
-
-        if use_sum:
-            
-            y = np.dot(weights, x)
 
         x = x.reshape(1,-1)
         y = y.reshape(-1, 1)
