@@ -9,10 +9,7 @@ import os
 import numpy as np
 import numpy.matlib
 import time
-import pandas as pd
-from NeuFun_Cuda import convolution, convolution_type2, neuron, neuron_ca1, weights_update_rate, bcm
-import csv
-from bisect import bisect
+from NeuFun_Cuda import weights_update_rate
 import multiprocessing
 import pickle
 import psutil
@@ -101,11 +98,14 @@ def episode_run(episode):
 
     ## initialise variables
     store_pos = np.zeros([trials, T_max,2]) # stores trajectories (for plotting)
-    firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
-    firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
-    firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
     initial_weights = {'CA1': CA1.w_ca3.copy(),
-                        'AC': AC.w_ca1.copy()}
+                    'AC': AC.w_ca1.copy()}
+
+    if save_activity or plot_flag:             
+        firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
+        firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
+        firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
+
 
     ## initialize plot open field
     if plot_flag:
@@ -113,17 +113,9 @@ def episode_run(episode):
         fig= initialize_plots( r_goal, bounds_x, bounds_y,
                                CA1, offset_ca1, offset_ca3, CA3, c )
 
-        #calculate policy
-        if CA1.alpha == 0:
-            ac = np.dot(AC.actions, AC.w_ca1)/a0 #vector of preferred actions according to the weights
-        elif CA1.alpha == 1:
-            ac = np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
-        else:
-            ac = (1-CA1.alpha)*np.dot(AC.actions, AC.w_ca1)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
-
         update_plots(fig, 0, store_pos, None,
                      firing_rate_store_AC, firing_rate_store_CA1,
-                     firing_rate_store_CA3, CA3, CA1, AC, ac)
+                     firing_rate_store_CA3, CA3, CA1, AC)
         fig.show()
           
     
@@ -147,7 +139,7 @@ def episode_run(episode):
 
         print('Episode:', episode, 'Trial:', trial, flush=True)
 
-        #temp_neuron = 104
+        #temp_neuron = 50
         #temp_thetas = []
         #temp_activity = []
         #temp_activity_original = []
@@ -156,10 +148,12 @@ def episode_run(episode):
         for t_trial in tqdm(range(T_max)):
 
             # store variables for plotting/saving
-            store_pos[trial, t_trial, :] = position 
-            firing_rate_store_CA3[:,t_trial,trial] = CA3.firing_rates
-            firing_rate_store_CA1[:,t_trial,trial] = CA1.firing_rates
-            firing_rate_store_AC[:,t_trial,trial] = AC.instantaneous_firing_rates 
+            store_pos[trial, t_trial, :] = position
+
+            if save_activity or plot_flag:
+                firing_rate_store_CA3[:,t_trial,trial] = CA3.firing_rates
+                firing_rate_store_CA1[:,t_trial,trial] = CA1.firing_rates
+                firing_rate_store_AC[:,t_trial,trial] = AC.instantaneous_firing_rates 
 
             ## CA3 Layer
             CA3.update_activity(position)
@@ -181,9 +175,10 @@ def episode_run(episode):
                 CA1.update_weights(eta_bcm * update)
 
                 #temp_thetas.append(bcm.thetas[temp_neuron])
+                #act = np.dot(CA1.w_ca3, CA3.firing_rates)
                 #temp_activity.append(act[temp_neuron])
                 #temp_activity_original.append(CA1.firing_rates[temp_neuron])
-                #temp_correction.append(update[temp_neuron])
+                #temp_correction.append((eta_bcm * update)[temp_neuron])
 
             W, eligibility_trace, trace_tot = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot, tau_e)
 
@@ -253,20 +248,12 @@ def episode_run(episode):
 
             AC.update_weights(-eta_Sero*eligibility_trace_sero)
 
-        #calculate policy
-        if CA1.alpha == 0:
-            ac = np.dot(AC.actions, AC.w_ca1)/a0 #vector of preferred actions according to the weights
-        elif CA1.alpha == 1:
-            ac = np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
-        else:
-            ac = (1-CA1.alpha)*np.dot(AC.actions, AC.w_ca1)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
-
         ## plot
         if plot_flag:
             
             update_plots(fig,trial, store_pos, starting_position,
                          firing_rate_store_AC, firing_rate_store_CA1,
-                         firing_rate_store_CA3, CA3, CA1, AC, ac)
+                         firing_rate_store_CA3, CA3, CA1, AC)
 
             
     returns = { 'episode':episode,  

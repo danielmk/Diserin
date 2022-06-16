@@ -125,7 +125,7 @@ def initialize_plots(r_goal, bounds_x, bounds_y,
 
 def update_plots(fig, trial, store_pos, starting_position,
                  firing_rate_store_AC, firing_rate_store_CA1,
-                 firing_rate_store_CA3, CA3, CA1, AC, ac):
+                 firing_rate_store_CA3, CA3, CA1, AC):
 
     ax0, ax1, ax2, ax3, ax4, ax5, ax6 = fig.get_axes()[0:7]
 
@@ -148,6 +148,14 @@ def update_plots(fig, trial, store_pos, starting_position,
     F1 = ax0.plot(trajectory[:, 0], trajectory[:,1])
     
     ####### POLICY #########
+
+    if CA1.alpha == 0:
+        ac = np.dot(AC.actions, AC.w_ca1)/a0 #vector of preferred actions according to the weights
+    elif CA1.alpha == 1:
+        ac = np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
+    else:
+        ac = (1-CA1.alpha)*np.dot(AC.actions, AC.w_ca1)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
+
 
     if CA1.alpha==0:
         f4 = ax1.quiver(CA1.pc[:,0], CA1.pc[:,1], ac[0,:], ac[1,:])

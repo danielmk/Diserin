@@ -61,7 +61,7 @@ class CA3_layer:
     def __init__(self, bounds_x, bounds_y, space_pc, offset,
                        rho, sigma):
 
-        self.rho, self.sigma = rho, sigma
+        self.rho, self.sigma_sq = rho, sigma**2
 
         if offset:
             x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
@@ -82,7 +82,7 @@ class CA3_layer:
 
     def update_activity(self, pos):
         
-        self.firing_rates = self.rho * np.exp(- ( (pos-self.pc)**2).sum(axis=1) / self.sigma**2 )
+        self.firing_rates = self.rho * np.exp(- ( (pos-self.pc)**2).sum(axis=1) *(1./self.sigma_sq) )
         
         self.spikes = np.random.rand(self.N) <= self.firing_rates
 
@@ -100,7 +100,7 @@ class CA1_layer:
                        w_min, w_max,
                        w_ca1_init, max_init, sigma_init):
 
-        self.rho_pc, self.sigma = rho_pc, sigma
+        self.rho_pc, self.sigma_sq = rho_pc, sigma**2
 
         if offset:
             x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
@@ -142,29 +142,28 @@ class CA1_layer:
         positional_firing_rate, lambda_u = 0, 0
 
         if self.alpha != 1:  
-            positional_firing_rate = self.rho_pc * np.exp(- ((pos-self.pc)**2).sum(axis=1) / self.sigma**2 )
+            positional_firing_rate = self.rho_pc * np.exp(- ((pos-self.pc)**2).sum(axis=1) * (1./self.sigma_sq) )
         
         if self.alpha != 0:
 
-            self.epsp_decay = self.epsp_decay - self.epsp_decay/self.tau_m + spikes*self.w_ca3
-            self.epsp_rise = self.epsp_rise - self.epsp_rise/self.tau_s + spikes*self.w_ca3
+            self.epsp_decay = self.epsp_decay - self.epsp_decay*(1./self.tau_m) + spikes*self.w_ca3
+            self.epsp_rise = self.epsp_rise - self.epsp_rise*(1./self.tau_s) + spikes*self.w_ca3
 
-            EPSP = self.eps0*(self.epsp_decay - self.epsp_rise)/(self.tau_m - self.tau_s)
+            EPSP = self.eps0*(self.epsp_decay - self.epsp_rise)*(1./(self.tau_m - self.tau_s))
             EPSP = EPSP.sum(axis=1)
 
-            u = EPSP + self.chi*np.exp(-(time - self.last_spike_time)/self.tau_m)
-            lambda_u = self.rho*np.exp((u-self.theta)/(self.delta_u))
+            u = EPSP + self.chi*np.exp(-(time - self.last_spike_time)*(1./self.tau_m))
+            lambda_u = self.rho*np.exp((u-self.theta)*(1./self.delta_u))
         
 
         self.firing_rates = self.alpha*lambda_u + (1-self.alpha)*positional_firing_rate
 
         if self.firing_rates.max()>0.4:
-            self.firing_rates = self.firing_rates/self.firing_rates.max()*0.4
+            self.firing_rates = self.firing_rates*(1./self.firing_rates.max()*0.4)
 
         self.spikes = np.random.rand(self.N) <= self.firing_rates
     
         self.last_spike_time[self.spikes] = time
-
         self.epsp_rise[self.spikes] = 0
         self.epsp_decay[self.spikes] = 0
 
@@ -259,14 +258,14 @@ class Action_layer:
         self.instantaneous_firing_rates = np.zeros(self.N)
 
         # Actions
-        self.thetas = 2*np.pi*np.arange(1,N+1)/N
+        self.thetas = 2*np.pi*np.arange(1,N+1)*(1./N)
         self.actions = a0*np.array([np.cos(self.thetas), np.sin(self.thetas)]) #possible actions (x,y)
         
         # Lateral Connections
         diff_theta = self.thetas - self.thetas.reshape(-1,1)
         f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
         np.fill_diagonal(f,0)
-        self.w_lateral = (w_minus/N+w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
+        self.w_lateral = (w_minus*(1./N) + w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
 
         #CA1 connections
         self.w_ca1 = np.ones((N, N_ca1))*2#np.random.rand(N, N_ca1)*2 + 1
@@ -287,15 +286,12 @@ class Action_layer:
 
         EPSP = self.eps0*(self.epsp_decay-self.epsp_rise)/(self.tau_m-self.tau_s)
         
-        u = EPSP.sum(axis=1, keepdims=True).T + self.chi*np.exp((-time + self.last_spike_post)/self.tau_m)
+        u = EPSP.sum(axis=1) + self.chi*np.exp((-time + self.last_spike_post)/self.tau_m)
 
         self.firing_rates = self.rho*np.exp((u-self.theta)/self.delta_u)
-
-        self.spikes = np.random.rand(self.N) <= np.squeeze(self.firing_rates) #realization spike train
+        self.spikes = np.random.rand(self.N) <= self.firing_rates #realization spike train
         
         self.last_spike_post[self.spikes]= time #update time postsyn spike
-        self.Canc = 1-np.matlib.repmat(self.spikes, self.N_in+self.N, 1)
-
         self.epsp_decay[self.spikes] = 0
         self.epsp_rise[self.spikes] = 0
 
@@ -307,7 +303,7 @@ class Action_layer:
         self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
         self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
 
-        self.instantaneous_firing_rates = (self.rho_decay - self.rho_rise)/(self.tau_gamma - self.v_gamma)
+        self.instantaneous_firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
 
     def update_weights(self, update):
 
@@ -322,4 +318,4 @@ class Action_layer:
 
     def get_action(self,):
         
-        return (self.instantaneous_firing_rates*self.actions).sum(axis=1)/self.N
+        return np.einsum('ij, j -> i', self.actions, self.instantaneous_firing_rates)*(1./self.N)
