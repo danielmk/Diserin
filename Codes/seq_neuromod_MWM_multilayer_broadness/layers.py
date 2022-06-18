@@ -21,7 +21,7 @@ class BCM:
     
         if use_sum:
         
-            y = np.dot(weights, x)
+            y = np.einsum('ij,j->i',weights, x)
         
         current_thetas = self.compute_thetas(y)
         
