@@ -36,6 +36,18 @@ def make_action_weights_plot(ax,weights):
   return cb
 
 
+def compute_length(trajectory):
+    """
+    Receives a numpy array of shape (num_steps, 2), representing the trajectory of an agent.
+    Returns the length of the path.
+    """
+    
+    displacements = trajectory[1:] - trajectory[:-1]
+    displacements_length = np.sqrt((displacements**2).sum(axis=1))
+    
+    return displacements_length.sum()
+
+
 def make_weights_plot(ax, weights):
 
   N_out, N_in = weights.shape
@@ -136,10 +148,13 @@ def update_plots(fig, trial, store_pos, starting_position,
 
 
     ###### TRAJECTORY ########
-    ax0.set_title('Trial '+str(trial))
 
     trajectory = store_pos[trial]
     trajectory = trajectory[(trajectory[:,0]!=0.)|(trajectory[:,1]!=0.)]
+
+    L = compute_length(trajectory)
+
+    ax0.set_title('Trial {} (L={:.1f})'.format(trial, L))
     
     if starting_position is not None:
         ax0.plot(starting_position[0],starting_position[1],

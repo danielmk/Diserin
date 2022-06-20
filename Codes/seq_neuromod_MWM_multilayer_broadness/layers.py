@@ -134,7 +134,6 @@ class CA1_layer:
         self.w_min = w_min
         self.w_max = w_max
         self.w_ca3 = self._initilialize_weights(w_ca1_init, max_init, sigma_init)
-
         
 
     def update_activity(self, pos, spikes, time):
@@ -235,7 +234,7 @@ class Action_layer:
                        tau_gamma, v_gamma,
                        N_ca1,
                        a0, psi, w_minus, w_plus,
-                       weight_decay, base_weight, w_min, w_max):
+                       weight_decay, base_weight, w_min, w_max, fixed_step = None):
 
         self.N = N
         self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
@@ -274,6 +273,8 @@ class Action_layer:
         self.base_weight = base_weight
         self.w_min = w_min
         self.w_max = w_max
+        
+        self.fixed_step = fixed_step
         
 
     def update_activity(self, spikes_ca1, time):
@@ -318,4 +319,12 @@ class Action_layer:
 
     def get_action(self,):
         
-        return np.einsum('ij, j -> i', self.actions, self.instantaneous_firing_rates)*(1./self.N)
+        a = np.einsum('ij, j -> i', self.actions, self.instantaneous_firing_rates)
+        
+        if self.fixed_step is not None:
+            
+            return self.fixed_step * a / (np.linalg.norm(a)+ 1e-15)
+
+        else:
+
+            return a/self.N

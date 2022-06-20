@@ -92,7 +92,7 @@ def episode_run(episode):
                        rho0, theta, delta_u, tau_gamma, 
                        v_gamma, CA1.N,
                        a0, psi, w_minus, w_plus,
-                       weight_decay_ac, base_weight_ac, w_min, w_max)
+                       weight_decay_ac, base_weight_ac, w_min, w_max, fixed_step)
 
     bcm = BCM(CA1.N, memory_factor, weight_decay, base_weight)
 

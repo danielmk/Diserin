@@ -13,7 +13,7 @@ episodes = 1 # number of agents
 trials = 40 # number of trials for each agent
 plot_flag = True
 save_activity = False
-BCM_ON = True
+BCM_ON = False
 
 Dopamine = True
 Serotonine = False
@@ -70,11 +70,11 @@ sigma_pc_ca1 = 0.4 # (increase this for broadness)
 
 """CA1 parameters"""
 # Weights
-w_min_ca1 = -5
+w_min_ca1 = 0
 w_max_ca1 = 3
 
 w_ca1_init = 'convolutional' # option: 'convolutional', 'uniform', 'identity'
-max_init = 2.5 # needed just with convolutional opiton
+max_init = 2. # needed just with convolutional opiton
 sigma_init = 1.2 # needed just with convolutional opiton
 
 # SRM0
@@ -94,7 +94,7 @@ tau_s = 5 #synaptic time rise epsp
 chi = -5 #scaling constant refractory effect
 rho0 = 0.06 #scaling rate
 theta = 16 #threshold
-delta_u = 2 #escape noise
+delta_u = 5 #escape noise
 N_action = 40 #number action neurons
 
 weight_decay_ac = 0.
@@ -107,12 +107,13 @@ psi = 20 # the higher, the more narrow the range of excitation
 w_minus = -300 # (consider decreasing it)
 w_plus = 100
 
-a0=.08 # action?
+a0= 0.08 # action
+fixed_step = 0.0013 # None for not fixed step, 0.002
 dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 0.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 
 """BCM parameters"""
