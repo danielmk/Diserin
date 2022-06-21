@@ -14,6 +14,7 @@ import multiprocessing
 import pickle
 import psutil
 from tqdm import tqdm
+import time
 
 from parameters import *
 from layers import *
@@ -33,6 +34,8 @@ def get_starting_position(starting_position_option):
     exit()
 
 def main():
+
+    start = time.time()
 
     results=[]
 
@@ -60,6 +63,8 @@ def main():
         results = [result.get() for result in results]
         pool.close()
         pool.join()
+
+        print("Done! Simulation time: {:.2f} minutes.".format((time.time()-start)/60))
 
     with open(jobID+'.pickle', 'wb') as myfile:
 
