@@ -74,8 +74,7 @@ def make_weights_plot(ax, weights):
 
  
 
-def initialize_plots(r_goal, bounds_x, bounds_y,
-                     CA1, offset_ca1, offset_ca3, CA3, c):
+def initialize_plots(CA1, CA3):
 
 
         fig = plt.figure()

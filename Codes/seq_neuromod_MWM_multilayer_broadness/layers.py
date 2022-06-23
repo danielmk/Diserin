@@ -1,61 +1,6 @@
 from pickletools import optimize
 import numpy as np
 
-
-class BCM:
-
-    def __init__(self, N,  memory_factor, weight_decay, base_weight):
-
-        self.num_neurons = N
-        self.weight_decay = weight_decay
-        self.base_weight = base_weight
-        self.memory_factor = memory_factor
-
-        self.thetas = None
-
-    def get_update(self, x, y, weights, use_sum=False):
-        """
-        x is the pre-synaptic activity
-        y is the post-synaptic acitivity
-        """
-    
-        if use_sum:
-        
-            y = np.einsum('ij,j->i',weights, x)
-        
-        current_thetas = self.compute_thetas(y)
-        
-        if self.thetas is None:
-
-            self.thetas = current_thetas
-        
-        else:
-
-            self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
-
-        x = x.reshape(1,-1)
-        y = y.reshape(-1, 1)
-        thetas = self.thetas.reshape(-1,1)
-
-        dW = y*(y-thetas)*x 
-
-        if self.weight_decay!=0:
-
-            decay = weights - self.base_weight
-            decay = np.where(decay>0, decay, 0)
-            dW -= self.weight_decay * decay
-
-        return dW
-
-    def compute_thetas(self, y):
-            
-        return y**2 # with this value inhibition and exhitation are more or less even
-        #return y.mean()
-        #return y**2
-
-
-
-
 class CA3_layer:
 
     def __init__(self, bounds_x, bounds_y, space_pc, offset,

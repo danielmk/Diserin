@@ -19,19 +19,8 @@ import time
 from parameters import *
 from layers import *
 from plot_functions import *
-
-def get_starting_position(starting_position_option):
-
-    if starting_position_option=='origin':
-
-        return np.array([0.,0.])
-
-    if starting_position_option=='random':
-
-        return np.random.rand(2)*4 - 2
-
-    print("Starting position option non valid!")
-    exit()
+from utils import *
+from plasticity_models import *
 
 def main():
 
@@ -100,13 +89,16 @@ def episode_run(episode):
                        weight_decay_ac, base_weight_ac, w_min, w_max, fixed_step)
 
     bcm = BCM(CA1.N, memory_factor, weight_decay, base_weight)
+    
+    plasticity_AC = Plasticity_AC(AC.N, CA1.N, A_DA, tau_DA, tau_e, A_Sero, tau_Sero, tau_e_sero, A_DA, tau_DA)
 
     ## initialise variables
     store_pos = np.zeros([trials, T_max,2]) # stores trajectories (for plotting)
     initial_weights = {'CA1': CA1.w_ca3.copy(),
-                    'AC': AC.w_ca1.copy()}
+                       'AC': AC.w_ca1.copy()}
 
-    if save_activity or plot_flag:             
+    if save_activity or plot_flag:  
+
         firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
         firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
         firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
@@ -115,8 +107,7 @@ def episode_run(episode):
     ## initialize plot open field
     if plot_flag:
 
-        fig= initialize_plots( r_goal, bounds_x, bounds_y,
-                               CA1, offset_ca1, offset_ca3, CA3, c )
+        fig= initialize_plots(CA1, CA3)
 
         update_plots(fig, 0, store_pos, None,
                      firing_rate_store_AC, firing_rate_store_CA1,
@@ -135,12 +126,6 @@ def episode_run(episode):
         position = starting_position.copy()
         rew_found = 0
         t_trial = 0
-
-        trace_tot = np.zeros([AC.N,CA1.N]) #sum of the traces
-        eligibility_trace = np.zeros([AC.N, CA1.N]) #total convolution
-        
-        trace_tot_sero = np.zeros([AC.N,CA1.N]) #sum of the traces
-        eligibility_trace_sero = np.zeros([AC.N, CA1.N]) #total convolution
 
         print('Episode:', episode, 'Trial:', trial, flush=True)
 
@@ -185,12 +170,7 @@ def episode_run(episode):
                 #temp_activity_original.append(CA1.firing_rates[temp_neuron])
                 #temp_correction.append((eta_bcm * update)[temp_neuron])
 
-            W, eligibility_trace, trace_tot = weights_update_rate((A_pre_post+A_post_pre)/2, tau_pre_post, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot, tau_e)
-
-            #STDP with unsymmetric window and depression due to serotonin
-            if Serotonine:
-
-                W_sero, eligibility_trace_sero, trace_tot_sero = weights_update_rate((A_pre_post_sero+A_post_pre_sero)/2, tau_pre_post_sero, np.matlib.repmat(CA1.firing_rates.T,AC.N,1), np.matlib.repmat(np.squeeze(AC.instantaneous_firing_rates),CA1.N,1).T, trace_tot_sero, tau_e_sero)
+            plasticity_AC.update_traces(CA1.firing_rates, AC.instantaneous_firing_rates)
 
             ## position update
             position += a
@@ -210,7 +190,7 @@ def episode_run(episode):
             
             if Acetylcholine and wall_hit:
                 
-                AC.update_weights(-eta_ACh*W)
+                AC.update_weights(-eta_ACh*plasticity_AC.release_ACh(CA1.firing_rates, AC.instantaneous_firing_rates))
             
             ## reward
 
@@ -247,11 +227,11 @@ def episode_run(episode):
         # change due to serotonin or dopamine
         if Dopamine and rew_found:
 
-            AC.update_weights(eta_DA*eligibility_trace)
+            AC.update_weights(eta_DA*plasticity_AC.trace_DA)
 
         if Serotonine and not rew_found:
 
-            AC.update_weights(-eta_Sero*eligibility_trace_sero)
+            AC.update_weights(-eta_Sero*plasticity_AC.trace_5HT)
 
         ## plot
         if plot_flag:

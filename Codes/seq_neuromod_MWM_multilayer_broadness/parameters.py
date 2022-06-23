@@ -4,7 +4,7 @@ import numpy as np
 builtin_variables = set(globals())
 
 """Random seed"""
-random_seed = 42
+random_seed = 40
 
 """ Main options """
 
@@ -55,7 +55,7 @@ tau_e_sero= 5*10**3 #time constant eligibility trace for serotonin
 T_max = 15*10**3 #maximum time trial
 
 # Reward and agent positions
-starting_position_option = 'random' # option: 'origin', 'random'
+starting_position_option = 'origin' # option: 'origin', 'random'
 c = np.array([-1.5,-1.5]) #centre reward 1
 r_goal = 0.3 # radius goal area
 
@@ -75,7 +75,7 @@ w_max_ca1 = 3
 
 w_ca1_init = 'convolutional' # option: 'convolutional', 'uniform', 'identity'
 max_init = 2. # needed just with convolutional opiton
-sigma_init = 1.2 # needed just with convolutional opiton
+sigma_init = 1.5 # needed just with convolutional opiton
 
 # SRM0
 eps0_ca1 = 20*5
@@ -108,12 +108,12 @@ w_minus = -300 # (consider decreasing it)
 w_plus = 100
 
 a0= 0.08 # action
-fixed_step = 0.0013 # None for not fixed step, 0.002
+fixed_step = None#0.0013 # None for not fixed step, 0.002
 dx = 0.01 # length of bouncing back from walls
 
 
 """ CA3 parameters"""
-ca3_scale = 0.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
+ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
 
 """BCM parameters"""
