@@ -70,7 +70,7 @@ class Plasticity_AC:
 
         C_x = rates_post*A/(tau**-1 + rates_post)
 
-        return rates_pre*C_x
+        return C_x*rates_pre
 
     def update_traces(self, rates_pre, rates_post):
 

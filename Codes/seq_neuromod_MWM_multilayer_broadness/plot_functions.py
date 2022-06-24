@@ -115,6 +115,12 @@ def initialize_plots(CA1, CA3):
         if offset_ca1!=offset_ca3:
             ax0.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
 
+        if obstacle:
+            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[1]], [obstacle_bounds_y[1],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[1]], [obstacle_bounds_y[0],obstacle_bounds_y[0]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[0]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x[1],obstacle_bounds_x[1]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
+
         ax1.set_title('Policy')
         ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
         

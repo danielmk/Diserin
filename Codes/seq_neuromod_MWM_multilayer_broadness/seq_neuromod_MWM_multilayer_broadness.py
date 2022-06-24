@@ -7,9 +7,7 @@ sys.path.extend(['../', './Codes/'])
 from numba import jit, cuda
 import os
 import numpy as np
-import numpy.matlib
 import time
-from NeuFun_Cuda import weights_update_rate
 import multiprocessing
 import pickle
 import psutil
@@ -21,6 +19,7 @@ from layers import *
 from plot_functions import *
 from utils import *
 from plasticity_models import *
+from environment import *
 
 def main():
 
@@ -76,6 +75,9 @@ def episode_run(episode):
 
     ## Place cells positions
 
+    environment = MWM(bounds_x, bounds_y, c, r_goal, dx, 
+                      obstacle, obstacle_bounds_x, obstacle_bounds_y)
+
     CA3 = CA3_layer(bounds_x, bounds_y, space_pc, offset_ca3, rho_pc, sigma_pc_ca3)
 
     CA1 = CA1_layer(bounds_x, bounds_y, space_pc, offset_ca1, rho_pc, sigma_pc_ca1,
@@ -124,18 +126,11 @@ def episode_run(episode):
         starting_position = get_starting_position(starting_position_option)
 
         position = starting_position.copy()
-        rew_found = 0
         t_trial = 0
 
         print('Episode:', episode, 'Trial:', trial, flush=True)
 
-        #temp_neuron = 50
-        #temp_thetas = []
-        #temp_activity = []
-        #temp_activity_original = []
-        #temp_correction = []
-
-        for t_trial in tqdm(range(T_max)):
+        for t_trial in tqdm(range(T_max)):                    
 
             # store variables for plotting/saving
             store_pos[trial, t_trial, :] = position
@@ -164,39 +159,18 @@ def episode_run(episode):
                 update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3, use_sum=False)
                 CA1.update_weights(eta_bcm * update)
 
-                #temp_thetas.append(bcm.thetas[temp_neuron])
-                #act = np.dot(CA1.w_ca3, CA3.firing_rates)
-                #temp_activity.append(act[temp_neuron])
-                #temp_activity_original.append(CA1.firing_rates[temp_neuron])
-                #temp_correction.append((eta_bcm * update)[temp_neuron])
-
             plasticity_AC.update_traces(CA1.firing_rates, AC.instantaneous_firing_rates)
 
             ## position update
-            position += a
 
-            #check if agent is out of boundaries. If it is, bounce back in the opposite direction
-            wall_hit = True
-            if position[0]<=bounds_x[0]:
-                position = position+dx*np.array([1,0])
-            elif position[0]>= bounds_x[1]:
-                position = position+dx*np.array([-1,0])
-            elif position[1]<=bounds_y[0]:
-                position = position+dx*np.array([0,1])
-            elif position[1]>=bounds_y[1]:
-                position = position+dx*np.array([0,-1])
-            else:
-                wall_hit = False
+            position, wall_hit, reward_found = environment.update_position(position, a)
             
             if Acetylcholine and wall_hit:
                 
                 AC.update_weights(-eta_ACh*plasticity_AC.release_ACh(CA1.firing_rates, AC.instantaneous_firing_rates))
-            
-            ## reward
 
-            if  rew_found==0 and np.sum((position-c)**2)<=r_goal**2:
+            if reward_found:
 
-                rew_found=1 #flag reward found (so that trial is ended soon)
                 rewarding_trials[trial] = 1
                 rewarding_times[trial] = t_trial
                 
@@ -211,25 +185,12 @@ def episode_run(episode):
 
         ## update weights - end of trial
 
-        #input("press enter to continue")
-        #plt.ion()
-        #figa, axa = plt.subplots(2,2, figsize=(20,20))
-        #axa[0,0].plot(temp_thetas,  'o--', linewidth=0.5, markersize=1)
-        #axa[0,0].set_title('BCM Threshold (memory factor={})'.format(bcm.memory_factor))
-        #axa[0,1].plot(temp_activity,  'o--', linewidth=0.5, markersize=1)
-        #axa[0,1].set_title(r'$\sum w_{ij} \lambda_j^{CA3}$')
-        #axa[1,0].plot(temp_activity_original, 'o--', linewidth=0.5, markersize=1)
-        #axa[1,0].set_title('Activity with SRM0')
-        #axa[1,1].plot(temp_correction)
-        #axa[1,1].set_title('Updates')
-        #figa.show()
-
         # change due to serotonin or dopamine
-        if Dopamine and rew_found:
+        if Dopamine and reward_found:
 
             AC.update_weights(eta_DA*plasticity_AC.trace_DA)
 
-        if Serotonine and not rew_found:
+        if Serotonine and not reward_found:
 
             AC.update_weights(-eta_Sero*plasticity_AC.trace_5HT)
 
@@ -240,7 +201,6 @@ def episode_run(episode):
                          firing_rate_store_AC, firing_rate_store_CA1,
                          firing_rate_store_CA3, CA3, CA1, AC)
 
-            
     returns = { 'episode':episode,  
                 'rewarding_trials':rewarding_trials, 
                 'rewarding_times': rewarding_times,

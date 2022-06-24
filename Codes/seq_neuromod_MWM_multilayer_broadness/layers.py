@@ -212,7 +212,7 @@ class Action_layer:
         self.w_lateral = (w_minus*(1./N) + w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
 
         #CA1 connections
-        self.w_ca1 = np.ones((N, N_ca1))*2#np.random.rand(N, N_ca1)*2 + 1
+        self.w_ca1 = np.ones((N, N_ca1))*2 #np.random.rand(N, N_ca1)*2 + 1
 
         self.weight_decay = weight_decay
         self.base_weight = base_weight
@@ -254,9 +254,9 @@ class Action_layer:
     def update_weights(self, update):
 
         self.w_ca1 += update
-        decay = self.w_ca1 - self.base_weight
-        decay = np.where(decay>0, decay, 0)
-        self.w_ca1 -= self.weight_decay*decay
+        #decay = self.w_ca1 - self.base_weight
+        #decay = np.where(decay>0, decay, 0)
+        #self.w_ca1 -= self.weight_decay*decay
 
         self.w_ca1 = np.clip(self.w_ca1, self.w_min, self.w_max)
 
