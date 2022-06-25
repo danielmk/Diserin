@@ -14,12 +14,14 @@ import psutil
 from tqdm import tqdm
 import time
 
-from parameters import *
 from layers import *
 from plot_functions import *
 from utils import *
 from plasticity_models import *
 from environment import *
+
+parameter_file = sys.argv[-1]
+exec("from {} import *".format(parameter_file))
 
 def main():
 
