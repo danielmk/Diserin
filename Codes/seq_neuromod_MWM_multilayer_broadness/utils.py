@@ -10,5 +10,10 @@ def get_starting_position(starting_position_option):
 
         return np.random.rand(2)*4 - 2
 
+
+    if starting_position_option=='upper-right':
+        
+        return np.array([1.5, 1.5])
+
     print("Starting position option non valid!")
     exit()

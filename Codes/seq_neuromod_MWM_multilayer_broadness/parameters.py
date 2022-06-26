@@ -1,4 +1,3 @@
-from tkinter import FALSE
 import numpy as np
 
 builtin_variables = set(globals())
@@ -23,6 +22,7 @@ offset_ca1 = False
 offset_ca3 = False
 
 obstacle = True
+obstacle_2 = True
 
 """Weights boundaries"""
 w_max = 3
@@ -61,10 +61,13 @@ bounds_y = np.array([-2,2]) #bounds open field, y axis
 c = np.array([-1.5,-1.5]) #centre reward 1
 r_goal = 0.3 # radius goal area
 
-starting_position_option = 'origin' # option: 'origin', 'random'
+starting_position_option = 'upper-right' # option: 'origin', 'random'
 
 obstacle_bounds_x = np.array([-1., -0.8 ])
 obstacle_bounds_y = np.array([-2, 0. ])
+
+obstacle_bounds_x_2 = np.array([0.8, 1 ])
+obstacle_bounds_y_2 = np.array([0., 2. ])
 
 
 """Space cells parameters"""
@@ -117,7 +120,7 @@ w_minus = -300 # (consider decreasing it)
 w_plus = 100
 
 a0= 0.08 # action
-fixed_step = 0.0015 # None for not fixed step (velocity with 0.003 = 0.3m/s)
+fixed_step = 0.003 # None for not fixed step (velocity with 0.003 = 0.3m/s)
 dx = 0.01 # length of bouncing back from walls
 
 

@@ -78,7 +78,8 @@ def episode_run(episode):
     ## Place cells positions
 
     environment = MWM(bounds_x, bounds_y, c, r_goal, dx, 
-                      obstacle, obstacle_bounds_x, obstacle_bounds_y)
+                      obstacle, obstacle_bounds_x, obstacle_bounds_y,
+                      obstacle_2, obstacle_bounds_x_2, obstacle_bounds_y_2)
 
     CA3 = CA3_layer(bounds_x, bounds_y, space_pc, offset_ca3, rho_pc, sigma_pc_ca3)
 

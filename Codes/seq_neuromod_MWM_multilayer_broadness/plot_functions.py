@@ -121,6 +121,12 @@ def initialize_plots(CA1, CA3):
             ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[0]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
             ax0.plot([obstacle_bounds_x[1],obstacle_bounds_x[1]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
 
+        if obstacle_2:
+            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[1],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[0]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[0]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([obstacle_bounds_x_2[1],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
+
         ax1.set_title('Policy')
         ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
         
