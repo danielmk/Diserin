@@ -113,7 +113,7 @@ def initialize_plots(CA1, CA3):
         ax0.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
         #ax0.scatter(CA1.pc[104,0],CA1.pc[104,1], s=140, facecolors='none', edgecolors='r')
         if offset_ca1!=offset_ca3:
-            ax0.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
+            ax0.scatter(CA3.neuron_model.pc[:,0],CA3.neuron_model.pc[:,1], s=1, label ="CA3")
 
         if obstacle:
             ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[1]], [obstacle_bounds_y[1],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
@@ -132,7 +132,7 @@ def initialize_plots(CA1, CA3):
         
         ax1.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
         if offset_ca1!=offset_ca3:
-            ax1.scatter(CA3.pc[:,0],CA3.pc[:,1], s=1, label ="CA3")
+            ax1.scatter(CA3.neuron_model.pc[:,0],CA3.neuron_model.pc[:,1], s=1, label ="CA3")
 
         ax2.set_title('CA3 firing rates')
         ax3.set_title('CA1 firing rates')
@@ -186,7 +186,7 @@ def update_plots(fig, trial, store_pos, starting_position,
     if CA1.alpha==0:
         f4 = ax1.quiver(CA1.pc[:,0], CA1.pc[:,1], ac[0,:], ac[1,:])
     else:
-        f4 = ax1.quiver(CA3.pc[:,0], CA3.pc[:,1], ac[0,:], ac[1,:])
+        f4 = ax1.quiver(CA3.neuron_model.pc[:,0], CA3.neuron_model.pc[:,1], ac[0,:], ac[1,:])
     
     ####### FIRING RATES #################
 

@@ -1,34 +1,24 @@
 from pickletools import optimize
 import numpy as np
 
+from neuron_models import *
+
 class CA3_layer:
 
-    def __init__(self, bounds_x, bounds_y, space_pc, offset,
-                       rho, sigma):
+    def __init__(self, bounds_x, bounds_y, space_pc, offset, rho, sigma):
 
-        self.rho, self.sigma_sq = rho, sigma**2
+        self.neuron_model = Place_Cells(bounds_x, bounds_y, space_pc, offset,
+                                        rho, sigma)
 
-        if offset:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1], space_pc)+space_pc/2,2)
-        else:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1]+space_pc, space_pc),2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1]+space_pc, space_pc),2)
-        
-        xx, yy = np.meshgrid(x_pc, y_pc)
-
-        self.pc = np.stack([xx,yy], axis=2).reshape(-1,2)
-        self.N = self.pc.shape[0] #number of place cells
-
-        # Internal state
-        self.spikes = np.zeros(self.N)
+        self.N = self.neuron_model.N
         self.firing_rates = np.zeros(self.N)
+        self.spikes = np.zeros(self.N)
         
 
     def update_activity(self, pos):
         
-        self.firing_rates = self.rho * np.exp(- ( (pos-self.pc)**2).sum(axis=1) *(1./self.sigma_sq) )
-        
+        self.firing_rates = self.neuron_model.get_firing_rates(pos)
+
         self.spikes = np.random.rand(self.N) <= self.firing_rates
 
 
@@ -193,7 +183,8 @@ class Action_layer:
                        tau_gamma, v_gamma,
                        N_ca1,
                        a0, psi, w_minus, w_plus,
-                       weight_decay, base_weight, w_min, w_max, fixed_step = None):
+                       weight_decay, base_weight, w_min, w_max, 
+                       use_fixed_step, fixed_step):
 
         self.N = N
         self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
@@ -233,7 +224,8 @@ class Action_layer:
         self.w_min = w_min
         self.w_max = w_max
         
-        self.fixed_step = fixed_step
+        self.fixed_step = fixed_step if use_fixed_step else None
+         
         
 
     def update_activity(self, spikes_ca1, time):

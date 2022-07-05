@@ -5,24 +5,31 @@ builtin_variables = set(globals())
 """Random seed"""
 random_seed = 40
 
-""" Main options """
+"""Output file"""
+output_name = 'results' # the results will be saved as 'output_name.pickle'
 
-jobID = 'results' #ID of the JOB, the results will be saved as 'jobID.pickle'
+"""Episodes and Trials"""
 episodes = 1 # number of agents
 trials = 40 # number of trials for each agent
+
+""" Options """
 plot_flag = True
 save_activity = False
-BCM_ON = True
 
 Dopamine = True
 Serotonine = False
 Acetylcholine = True
 
+BCM_ON = True
+
 offset_ca1 = False
 offset_ca3 = False
 
 obstacle = True
-obstacle_2 = True
+obstacle_2 = False
+
+use_fixed_step = False
+smooth_firing = False
 
 """Weights boundaries"""
 w_max = 3
@@ -85,7 +92,7 @@ w_max_ca1 = 3
 
 w_ca1_init = 'uniform-convolutional' # option: 'convolutional', 'uniform', 'identity'
 max_init = 2. # needed just with convolutional opiton
-sigma_init = 100 # needed just with convolutional opiton
+sigma_init = 1.5 # needed just with convolutional opiton
 
 # SRM0
 eps0_ca1 = 20*5
@@ -96,7 +103,6 @@ rho0_ca1 = 0.06#scaling rate
 theta_ca1 = 16
 delta_u_ca1 = 2 #    /20 with the identity
 
-smooth_firing = True
 tau_gamma_ca1 = 50
 v_gamma_ca1 = 20
 

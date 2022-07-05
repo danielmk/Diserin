@@ -56,7 +56,7 @@ def main():
 
         print("Done! Simulation time: {:.2f} minutes.".format((time.time()-start)/60))
 
-    with open(jobID+'.pickle', 'wb') as myfile:
+    with open(output_name+'.pickle', 'wb') as myfile:
 
         pickle.dump((descriptor,results), myfile)
 
@@ -92,7 +92,8 @@ def episode_run(episode):
                        rho0, theta, delta_u, tau_gamma, 
                        v_gamma, CA1.N,
                        a0, psi, w_minus, w_plus,
-                       weight_decay_ac, base_weight_ac, w_min, w_max, fixed_step)
+                       weight_decay_ac, base_weight_ac, w_min, w_max, 
+                       use_fixed_step, fixed_step)
 
     bcm = BCM(CA1.N, memory_factor, weight_decay, base_weight)
     
