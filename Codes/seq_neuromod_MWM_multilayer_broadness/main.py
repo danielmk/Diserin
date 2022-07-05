@@ -85,7 +85,8 @@ def episode_run(episode):
 
     CA1 = CA1_layer(bounds_x, bounds_y, space_pc, offset_ca1, rho_pc, sigma_pc_ca1,
                     tau_m_ca1, tau_s_ca1, eps0_ca1, chi_ca1, rho0_ca1, theta_ca1, delta_u_ca1, ca3_scale, CA3.N,
-                    w_min_ca1, w_max_ca1, w_ca1_init, max_init, sigma_init)
+                    w_min_ca1, w_max_ca1, w_ca1_init, max_init, sigma_init,
+                    smooth_firing, tau_gamma_ca1, v_gamma_ca1)
 
     AC  = Action_layer(N_action, tau_m, tau_s, eps0, chi,
                        rho0, theta, delta_u, tau_gamma, 

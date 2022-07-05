@@ -83,9 +83,9 @@ sigma_pc_ca1 = 0.4 # (increase this for broadness)
 w_min_ca1 = 0
 w_max_ca1 = 3
 
-w_ca1_init = 'convolutional' # option: 'convolutional', 'uniform', 'identity'
+w_ca1_init = 'uniform-convolutional' # option: 'convolutional', 'uniform', 'identity'
 max_init = 2. # needed just with convolutional opiton
-sigma_init = 1.5 # needed just with convolutional opiton
+sigma_init = 100 # needed just with convolutional opiton
 
 # SRM0
 eps0_ca1 = 20*5
@@ -95,6 +95,10 @@ chi_ca1 = -5/10
 rho0_ca1 = 0.06#scaling rate
 theta_ca1 = 16
 delta_u_ca1 = 2 #    /20 with the identity
+
+smooth_firing = True
+tau_gamma_ca1 = 50
+v_gamma_ca1 = 20
 
 
 """ Action neurons parameters"""

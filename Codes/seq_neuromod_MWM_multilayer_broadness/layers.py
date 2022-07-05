@@ -43,7 +43,8 @@ class CA1_layer:
                        alpha,
                        N_ca3,
                        w_min, w_max,
-                       w_ca1_init, max_init, sigma_init):
+                       w_ca1_init, max_init, sigma_init,
+                       smooth_firing, tau_gamma, v_gamma):
 
         self.rho_pc, self.sigma_sq = rho_pc, sigma**2
 
@@ -79,6 +80,12 @@ class CA1_layer:
         self.w_min = w_min
         self.w_max = w_max
         self.w_ca3 = self._initilialize_weights(w_ca1_init, max_init, sigma_init)
+
+        self.smooth_firing = smooth_firing
+        if self.smooth_firing:
+            self.tau_gamma, self.v_gamma = tau_gamma, v_gamma
+            self.rho_decay = np.zeros(self.N)
+            self.rho_rise = np.zeros(self.N)
         
 
     def update_activity(self, pos, spikes, time):
@@ -110,6 +117,13 @@ class CA1_layer:
         self.last_spike_time[self.spikes] = time
         self.epsp_rise[self.spikes] = 0
         self.epsp_decay[self.spikes] = 0
+
+        if self.smooth_firing:
+
+            self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
+            self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
+
+            self.firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
 
     def update_weights(self, update):
 
