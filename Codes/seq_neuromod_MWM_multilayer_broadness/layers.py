@@ -176,101 +176,58 @@ class CA1_layer:
 
 class Action_layer:
 
-    def __init__(self, N,
-                       tau_m, tau_s, eps0,
-                       chi,
+    def __init__(self, N_in, N_out,
+                       tau_m, tau_s, eps0, chi,
                        rho, theta, delta_u,
                        tau_gamma, v_gamma,
-                       N_ca1,
                        a0, psi, w_minus, w_plus,
                        weight_decay, base_weight, w_min, w_max, 
                        use_fixed_step, fixed_step):
 
-        self.N = N
-        self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
-        self.chi = chi
-        self.rho, self.theta, self.delta_u = rho, theta, delta_u
-        self.N_in = N_ca1
+        self.neuron_model = SRM0(   N_in, N_out,
+                                    tau_m, tau_s, eps0,
+                                    chi,
+                                    rho, theta, delta_u,
+                                    tau_gamma, v_gamma,
+                                    True, psi, w_minus, w_plus,) 
+        self.N = N_out
+        self.N_in = N_in
         
-        self.epsp_decay = np.zeros((N, N_ca1 + N))
-        self.epsp_rise = np.zeros((N, N_ca1 + N))
-        self.last_spike_time = np.zeros(N) - 1000
-
-        self.tau_gamma, self.v_gamma = tau_gamma, v_gamma
-        self.rho_decay = np.zeros(N)
-        self.rho_rise = np.zeros(N)
-
-        self.last_spike_post=np.zeros(N)-1000
-
         self.firing_rates = np.zeros(self.N)
         self.spikes = np.zeros(self.N)
-        self.instantaneous_firing_rates = np.zeros(self.N)
 
-        # Actions
-        self.thetas = 2*np.pi*np.arange(1,N+1)*(1./N)
+        # to produce action
+        self.thetas = 2*np.pi*np.arange(1,self.N+1)*(1./self.N)
         self.actions = a0*np.array([np.cos(self.thetas), np.sin(self.thetas)]) #possible actions (x,y)
-        
-        # Lateral Connections
-        diff_theta = self.thetas - self.thetas.reshape(-1,1)
-        f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
-        np.fill_diagonal(f,0)
-        self.w_lateral = (w_minus*(1./N) + w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
+        self.fixed_step = fixed_step if use_fixed_step else None
 
-        #CA1 connections
-        self.w_ca1 = np.ones((N, N_ca1))*2 #np.random.rand(N, N_ca1)*2 + 1
-
+        # To handle weights updates
         self.weight_decay = weight_decay
         self.base_weight = base_weight
         self.w_min = w_min
-        self.w_max = w_max
-        
-        self.fixed_step = fixed_step if use_fixed_step else None
+        self.w_max = w_max     
          
-        
 
     def update_activity(self, spikes_ca1, time):
         
-        cat_spikes = np.concatenate([spikes_ca1, self.spikes])
-        cat_weights = np.concatenate([self.w_ca1, self.w_lateral], axis=1)
-
-        self.epsp_decay = self.epsp_decay - self.epsp_decay/self.tau_m + np.multiply(cat_spikes,cat_weights)
-        self.epsp_rise =  self.epsp_rise  - self.epsp_rise/self.tau_s +  np.multiply(cat_spikes,cat_weights)
-
-        EPSP = self.eps0*(self.epsp_decay-self.epsp_rise)/(self.tau_m-self.tau_s)
+        self.firing_rates, self.spikes = self.neuron_model.get_activity(spikes_ca1, time)
         
-        u = EPSP.sum(axis=1) + self.chi*np.exp((-time + self.last_spike_post)/self.tau_m)
-
-        self.firing_rates = self.rho*np.exp((u-self.theta)/self.delta_u)
-        self.spikes = np.random.rand(self.N) <= self.firing_rates #realization spike train
-        
-        self.last_spike_post[self.spikes]= time #update time postsyn spike
-        self.epsp_decay[self.spikes] = 0
-        self.epsp_rise[self.spikes] = 0
-
-        self.update_instantaneous_firing_rate()
-
-
-    def update_instantaneous_firing_rate(self):
-    
-        self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
-        self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
-
-        self.instantaneous_firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
 
     def update_weights(self, update):
 
-        self.w_ca1 += update
-        #decay = self.w_ca1 - self.base_weight
-        #decay = np.where(decay>0, decay, 0)
-        #self.w_ca1 -= self.weight_decay*decay
+        if self.weight_decay != 0:
+            
+            decay = self.w_ca1 - self.base_weight
+            decay = np.where(decay>0, decay, 0)
+            self.neuron_model.W -= self.weight_decay*decay
 
-        self.w_ca1 = np.clip(self.w_ca1, self.w_min, self.w_max)
+        self.neuron_model.W += update
 
-        
+        self.neuron_model.W = np.clip(self.neuron_model.W, self.w_min, self.w_max)        
 
     def get_action(self,):
         
-        a = np.einsum('ij, j -> i', self.actions, self.instantaneous_firing_rates)
+        a = np.einsum('ij, j -> i', self.actions, self.firing_rates)
         
         if self.fixed_step is not None:
             

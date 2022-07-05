@@ -88,9 +88,10 @@ def episode_run(episode):
                     w_min_ca1, w_max_ca1, w_ca1_init, max_init, sigma_init,
                     smooth_firing, tau_gamma_ca1, v_gamma_ca1)
 
-    AC  = Action_layer(N_action, tau_m, tau_s, eps0, chi,
-                       rho0, theta, delta_u, tau_gamma, 
-                       v_gamma, CA1.N,
+    AC  = Action_layer(CA1.N, N_action, 
+                       tau_m, tau_s, eps0, chi,
+                       rho0, theta, delta_u, 
+                       tau_gamma, v_gamma,
                        a0, psi, w_minus, w_plus,
                        weight_decay_ac, base_weight_ac, w_min, w_max, 
                        use_fixed_step, fixed_step)
@@ -102,7 +103,7 @@ def episode_run(episode):
     ## initialise variables
     store_pos = np.zeros([trials, T_max,2]) # stores trajectories (for plotting)
     initial_weights = {'CA1': CA1.w_ca3.copy(),
-                       'AC': AC.w_ca1.copy()}
+                       'AC': AC.neuron_model.W.copy()}
 
     if save_activity or plot_flag:  
 
@@ -143,7 +144,7 @@ def episode_run(episode):
             if save_activity or plot_flag:
                 firing_rate_store_CA3[:,t_trial,trial] = CA3.firing_rates
                 firing_rate_store_CA1[:,t_trial,trial] = CA1.firing_rates
-                firing_rate_store_AC[:,t_trial,trial] = AC.instantaneous_firing_rates 
+                firing_rate_store_AC[:,t_trial,trial] = AC.firing_rates 
 
             ## CA3 Layer
             CA3.update_activity(position)
@@ -164,7 +165,7 @@ def episode_run(episode):
                 update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3, use_sum=False)
                 CA1.update_weights(eta_bcm * update)
 
-            plasticity_AC.update_traces(CA1.firing_rates, AC.instantaneous_firing_rates)
+            plasticity_AC.update_traces(CA1.firing_rates, AC.firing_rates)
 
             ## position update
 
@@ -172,7 +173,7 @@ def episode_run(episode):
             
             if Acetylcholine and wall_hit:
                 
-                AC.update_weights(-eta_ACh*plasticity_AC.release_ACh(CA1.firing_rates, AC.instantaneous_firing_rates))
+                AC.update_weights(-eta_ACh*plasticity_AC.release_ACh(CA1.firing_rates, AC.firing_rates))
 
             if reward_found:
 
@@ -212,7 +213,7 @@ def episode_run(episode):
                 'trajectories': store_pos,
                 'initial_weights': initial_weights,
                 'final_weights': {'CA1': CA1.w_ca3,
-                                  'AC' : AC.w_ca1}}
+                                  'AC' : AC.neuron_model.W}}
     
     if save_activity:
 

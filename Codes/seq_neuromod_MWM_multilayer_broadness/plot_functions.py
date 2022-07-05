@@ -176,11 +176,11 @@ def update_plots(fig, trial, store_pos, starting_position,
     ####### POLICY #########
 
     if CA1.alpha == 0:
-        ac = np.dot(AC.actions, AC.w_ca1)/a0 #vector of preferred actions according to the weights
+        ac = np.dot(AC.actions, AC.neuron_model.W)/a0 #vector of preferred actions according to the weights
     elif CA1.alpha == 1:
-        ac = np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
+        ac = np.dot(AC.actions, np.dot(AC.neuron_model.W, CA1.w_ca3))/a0
     else:
-        ac = (1-CA1.alpha)*np.dot(AC.actions, AC.w_ca1)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
+        ac = (1-CA1.alpha)*np.dot(AC.actions, AC.neuron_model.W)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
 
 
     if CA1.alpha==0:
@@ -203,7 +203,7 @@ def update_plots(fig, trial, store_pos, starting_position,
     ############# WEIGHTS #################
 
     colorbars.append(make_weights_plot(ax5, CA1.w_ca3))
-    colorbars.append(make_action_weights_plot(ax6, AC.w_ca1))
+    colorbars.append(make_action_weights_plot(ax6, AC.neuron_model.W))
 
 
     #ax[1,2].set_yticks(ticks)

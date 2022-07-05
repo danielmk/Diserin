@@ -28,7 +28,7 @@ offset_ca3 = False
 obstacle = True
 obstacle_2 = False
 
-use_fixed_step = False
+use_fixed_step = True
 smooth_firing = False
 
 """Weights boundaries"""
