@@ -1,8 +1,5 @@
-"""Received from Carlos as working baseline.
-"""
-
 import sys
-sys.path.extend(['../', './Codes/'])
+sys.path.extend(['./', '../', './Codes/'])
 
 from numba import jit, cuda
 import os
@@ -13,6 +10,7 @@ import pickle
 import psutil
 from tqdm import tqdm
 import time
+import yaml
 
 from layers import *
 from plot_functions import *
@@ -21,15 +19,22 @@ from plasticity_models import *
 from environment import *
 
 parameter_file = sys.argv[-1]
-exec("from {} import *".format(parameter_file))
+
+with open(parameter_file, 'r') as stream:
+    try:
+        conf = yaml.safe_load(stream)
+    except yaml.YAMLError as exc:
+        print(exc)
+
+options = conf['OPTIONS']
 
 def main():
 
     start = time.time()
 
-    results=[]
+    results = []
 
-    if episodes==1:
+    if conf['num_agents']==1:
         
         results.append(episode_run(0))
 
@@ -37,7 +42,7 @@ def main():
 
         pool = multiprocessing.Pool(os.cpu_count() - 1)
 
-        for episode in range(0,episodes):
+        for episode in range(0, conf['num_agents']):
             print('Episode',episode)
 
             results.append(pool.apply_async(episode_run,(episode,)))
@@ -56,70 +61,59 @@ def main():
 
         print("Done! Simulation time: {:.2f} minutes.".format((time.time()-start)/60))
 
-    with open(output_name+'.pickle', 'wb') as myfile:
+    with open(conf['output_name']+'.pickle', 'wb') as myfile:
 
-        pickle.dump((descriptor,results), myfile)
+        pickle.dump((conf,results), myfile)
 
     
 def episode_run(episode):
 
     # different random seed for each pool
-    np.random.seed(random_seed + episode)
+    np.random.seed(conf['random_seed'] + episode)
 
     # flag to print first rewarding trial
     ever_rewarded_flag = False
 
     #Results to be exported for each episode
-    rewarding_trials = np.zeros(trials)
-    rewarding_times  = np.zeros(trials) - 1
+    rewarding_trials = np.zeros(conf['num_trials'])
+    rewarding_times  = np.zeros(conf['num_trials']) - 1
     
     print('Initiated episode:',episode)
 
     ## Place cells positions
 
-    environment = MWM(bounds_x, bounds_y, c, r_goal, dx, 
-                      obstacle, obstacle_bounds_x, obstacle_bounds_y,
-                      obstacle_2, obstacle_bounds_x_2, obstacle_bounds_y_2)
+    environment = MWM(conf['GEOMETRY'])
 
-    CA3 = CA3_layer(bounds_x, bounds_y, space_pc, offset_ca3, rho_pc, sigma_pc_ca3)
+    CA3 = CA3_layer(conf['CA3'])
 
-    CA1 = CA1_layer(bounds_x, bounds_y, space_pc, offset_ca1, rho_pc, sigma_pc_ca1,
-                    tau_m_ca1, tau_s_ca1, eps0_ca1, chi_ca1, rho0_ca1, theta_ca1, delta_u_ca1, ca3_scale, CA3.N,
-                    w_min_ca1, w_max_ca1, w_ca1_init, max_init, sigma_init,
-                    smooth_firing, tau_gamma_ca1, v_gamma_ca1)
+    CA1 = CA1_layer(CA3.N, conf['CA1'])
 
-    AC  = Action_layer(CA1.N, N_action, 
-                       tau_m, tau_s, eps0, chi,
-                       rho0, theta, delta_u, 
-                       tau_gamma, v_gamma,
-                       a0, psi, w_minus, w_plus,
-                       weight_decay_ac, base_weight_ac, w_min, w_max, 
-                       use_fixed_step, fixed_step)
+    AC  = Action_layer(CA1.N, conf['AC'])
 
-    bcm = BCM(CA1.N, memory_factor, weight_decay, base_weight)
-    
-    plasticity_AC = Plasticity_AC(AC.N, CA1.N, A_DA, tau_DA, tau_e, A_Sero, tau_Sero, tau_e_sero, A_DA, tau_DA)
+    plasticity_CA1 = BCM(CA1.N, conf['CA1'])
+
+    plasticity_AC = Plasticity_AC(AC.N, CA1.N, conf['AC'])
 
     ## initialise variables
-    store_pos = np.zeros([trials, T_max,2]) # stores trajectories (for plotting)
-    initial_weights = {'CA1': CA1.w_ca3.copy(),
+    store_pos = np.zeros([conf['num_trials'], conf['T_max'], 2]) # stores trajectories (for plotting)
+    initial_weights = {'CA1': CA1.SRM0_model.W.copy(),
                        'AC': AC.neuron_model.W.copy()}
 
-    if save_activity or plot_flag:  
+    if options['save_activity'] or options['plot_flag']:  
 
-        firing_rate_store_AC = np.zeros([AC.N, T_max, trials]) #stores firing rates action neurons (for plotting)
-        firing_rate_store_CA1 = np.zeros([CA1.N, T_max, trials])
-        firing_rate_store_CA3 = np.zeros([CA3.N, T_max, trials])
+        firing_rate_store_AC = np.zeros([AC.N,   conf['T_max'], conf['num_trials']]) #stores firing rates action neurons (for plotting)
+        firing_rate_store_CA1 = np.zeros([CA1.N, conf['T_max'], conf['num_trials']])
+        firing_rate_store_CA3 = np.zeros([CA3.N, conf['T_max'], conf['num_trials']])
 
 
     ## initialize plot open field
-    if plot_flag:
+    if options['plot_flag']:
 
-        fig= initialize_plots(CA1, CA3)
+        fig= initialize_plots(CA1, CA3, environment)
 
         update_plots(fig, 0, store_pos, None,
                      firing_rate_store_AC, firing_rate_store_CA1,
-                     firing_rate_store_CA3, CA3, CA1, AC)
+                     firing_rate_store_CA3, CA3, CA1, AC, environment)
         fig.show()
           
     
@@ -127,21 +121,21 @@ def episode_run(episode):
     
     t_episode = 0 # counter ms
 
-    for trial in range(trials):
+    for trial in range(conf['num_trials']):
 
-        starting_position = get_starting_position(starting_position_option)
+        starting_position = get_starting_position(conf['GEOMETRY']['starting_position_option'])
 
         position = starting_position.copy()
         t_trial = 0
 
         print('Episode:', episode, 'Trial:', trial, flush=True)
 
-        for t_trial in tqdm(range(T_max)):                    
+        for t_trial in tqdm(range(conf['T_max'])):                    
 
             # store variables for plotting/saving
             store_pos[trial, t_trial, :] = position
 
-            if save_activity or plot_flag:
+            if options['save_activity'] or options['plot_flag']:
                 firing_rate_store_CA3[:,t_trial,trial] = CA3.firing_rates
                 firing_rate_store_CA1[:,t_trial,trial] = CA1.firing_rates
                 firing_rate_store_AC[:,t_trial,trial] = AC.firing_rates 
@@ -160,10 +154,11 @@ def episode_run(episode):
 
             ## synaptic plasticity
             # BCM
-            if CA1.alpha!=0. and BCM_ON:
+            if CA1.alpha!=0. and conf['CA1']['plasticity_ON']:
                 
-                update = bcm.get_update(CA3.firing_rates, CA1.firing_rates, CA1.w_ca3, use_sum=False)
-                CA1.update_weights(eta_bcm * update)
+                update = plasticity_CA1.get_update(CA3.firing_rates, CA1.firing_rates, 
+                                                   use_sum=conf['CA1']['use_sum'], weights=CA1.SRM0_model.W)
+                CA1.update_weights(update)
 
             plasticity_AC.update_traces(CA1.firing_rates, AC.firing_rates)
 
@@ -171,9 +166,9 @@ def episode_run(episode):
 
             position, wall_hit, reward_found = environment.update_position(position, a)
             
-            if Acetylcholine and wall_hit:
+            if conf['AC']['Acetylcholine'] and wall_hit:
                 
-                AC.update_weights(-eta_ACh*plasticity_AC.release_ACh(CA1.firing_rates, AC.firing_rates))
+                AC.update_weights(plasticity_AC.release_ACh(CA1.firing_rates, AC.firing_rates))
 
             if reward_found:
 
@@ -192,30 +187,30 @@ def episode_run(episode):
         ## update weights - end of trial
 
         # change due to serotonin or dopamine
-        if Dopamine and reward_found:
+        if conf['AC']['Dopamine'] and reward_found:
 
-            AC.update_weights(eta_DA*plasticity_AC.trace_DA)
+            AC.update_weights(plasticity_AC.trace_DA)
 
-        if Serotonine and not reward_found:
+        if conf['AC']['Serotonine'] and not reward_found:
 
-            AC.update_weights(-eta_Sero*plasticity_AC.trace_5HT)
+            AC.update_weights(plasticity_AC.trace_5HT)
 
         ## plot
-        if plot_flag:
+        if options['plot_flag']:
             
             update_plots(fig,trial, store_pos, starting_position,
                          firing_rate_store_AC, firing_rate_store_CA1,
-                         firing_rate_store_CA3, CA3, CA1, AC)
+                         firing_rate_store_CA3, CA3, CA1, AC, environment)
 
     returns = { 'episode':episode,  
                 'rewarding_trials':rewarding_trials, 
                 'rewarding_times': rewarding_times,
                 'trajectories': store_pos,
                 'initial_weights': initial_weights,
-                'final_weights': {'CA1': CA1.w_ca3,
+                'final_weights': {'CA1': CA1.SRM0_model.w_ca3,
                                   'AC' : AC.neuron_model.W}}
     
-    if save_activity:
+    if conf['save_activity']:
 
         returns['activities'] = {'CA3': firing_rate_store_CA3,
                                  'CA1': firing_rate_store_CA1,

@@ -1,19 +1,25 @@
 import numpy as np
+from weights import *
 
 class Place_Cells:
 
-    def __init__(self, bounds_x, bounds_y, space_pc, offset,
-                       rho, sigma):
+    def __init__(self, conf):
 
         
-        self.rho, self.sigma_sq = rho, sigma**2
+        self.rho, self.sigma_sq = conf['rho'], conf['sigma']**2
 
-        if offset:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1], space_pc)+space_pc/2,2)
+        xs = conf['bounds_x']
+        ys = conf['bounds_y']
+        space = conf['space_pc']
+        
+        self.offset = conf['offset']
+
+        if conf['offset']:
+            x_pc = np.round(np.arange(xs[0], xs[1], space)+space/2,2)
+            y_pc = np.round(np.arange(ys[0], ys[1], space)+space/2,2)
         else:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1]+space_pc, space_pc),2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1]+space_pc, space_pc),2)
+            x_pc = np.round(np.arange(xs[0], xs[1]+space, space),2)
+            y_pc = np.round(np.arange(ys[0], ys[1]+space, space),2)
         
         xx, yy = np.meshgrid(x_pc, y_pc)
         self.pc = np.stack([xx,yy], axis=2).reshape(-1,2)
@@ -21,53 +27,53 @@ class Place_Cells:
         self.N = self.pc.shape[0]
 
     
-    def get_firing_rates(self, pos):
+    def get_activity(self, pos, get_spikes=False):
 
-        return self.rho * np.exp(- ( (pos-self.pc)**2).sum(axis=1) *(1./self.sigma_sq) )
+        rates = self.rho * np.exp(- ( (pos-self.pc)**2).sum(axis=1) *(1./self.sigma_sq) )
+        
+        if get_spikes:
+            spikes = np.random.rand(self.N) <= rates
+            return rates, spikes
 
+        return rates
 
 
 class SRM0:
 
-    def __init__(self, N_in, N_out,
-                       tau_m, tau_s, eps0,
-                       chi,
-                       rho, theta, delta_u,
-                       tau_gamma, v_gamma,
-                       lateral_connections, psi, w_minus, w_plus):
+    def __init__(self, N_in, N_out, conf):
 
        
         self.N_in = N_in
         self.N = N_out
 
-        self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
-        self.chi = chi
-        self.rho, self.theta, self.delta_u = rho, theta, delta_u
-        
-        self.epsp_decay = np.zeros((N_out, N_in + N_out))
-        self.epsp_rise = np.zeros((N_out, N_in + N_out))
-        self.last_spike_time = np.zeros(N_out) - 1000
+        self.tau_m, self.tau_s, self.eps0 = conf['tau_m'], conf['tau_s'], conf['eps0']
+        self.chi = conf['chi']
+        self.rho, self.theta, self.delta_u = conf['rho0'], conf['theta'], conf['delta_u']
 
-        self.tau_gamma, self.v_gamma = tau_gamma, v_gamma
-        self.rho_decay = np.zeros(N_out)
-        self.rho_rise =  np.zeros(N_out)
+        self.smooth_firing = conf['smooth_firing']
+
+        if self.smooth_firing:
+            self.tau_gamma, self.v_gamma = conf['tau_gamma'], conf['v_gamma']
+            self.rho_decay = np.zeros(N_out)
+            self.rho_rise =  np.zeros(N_out)
 
         self.spikes = np.zeros(N_out)
 
         # Weights
-        self.W = 2*np.ones((N_out, N_in)) #np.random.rand(N, N_ca1)*2 + 1
+        self.W = feedforward_weights_initiliazation(self.N, self.N_in, conf)
+        self.W_lateral = lateral_weights_initialization(self.N, conf)
 
-        if lateral_connections:
-            thetas = 2*np.pi*np.arange(1,N_out+1)*(1./N_out)
-            diff_theta = thetas - thetas.reshape(-1,1)
-            f = np.exp(psi*np.cos(diff_theta)) #lateral connectivity function
-            np.fill_diagonal(f,0)
-            self.W_lateral = (w_minus*(1./N_out) + w_plus*f/f.sum(axis=0)) #lateral connectivity action neurons
+        if self.W_lateral is not None:
+            self.epsp_decay = np.zeros((N_out, N_in + N_out))
+            self.epsp_rise = np.zeros((N_out, N_in + N_out))
         else:
-            self.W_lateral = None
+            self.epsp_decay = np.zeros((N_out, N_in))
+            self.epsp_rise = np.zeros((N_out, N_in))
+            
+        self.last_spike_time = np.zeros(N_out) - 1000
 
 
-    def get_activity(self, spikes_pre, time):
+    def get_activity(self, spikes_pre, time, get_spikes=False):
 
         if self.W_lateral is not None:
             cat_spikes = np.concatenate([spikes_pre, self.spikes])
@@ -90,9 +96,12 @@ class SRM0:
         self.epsp_decay[self.spikes] = 0
         self.epsp_rise[self.spikes] = 0
 
-        self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
-        self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
+        if self.smooth_firing:
+            self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
+            self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
+            firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
 
-        instantaneous_firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
-
-        return instantaneous_firing_rates, self.spikes
+        if get_spikes:
+            return firing_rates, self.spikes
+        else:
+            return firing_rates

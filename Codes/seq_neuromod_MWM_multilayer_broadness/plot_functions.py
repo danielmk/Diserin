@@ -1,6 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from parameters import *
 
 def make_firing_rates_plot(ax, rates):
 
@@ -11,7 +10,7 @@ def make_firing_rates_plot(ax, rates):
     return cb
 
 
-def make_action_weights_plot(ax,weights):
+def make_action_weights_plot(ax, weights, w_min, w_max):
 
   N_out, N_in = weights.shape
 
@@ -48,7 +47,7 @@ def compute_length(trajectory):
     return displacements_length.sum()
 
 
-def make_weights_plot(ax, weights):
+def make_weights_plot(ax, weights, w_min, w_max):
 
   N_out, N_in = weights.shape
 
@@ -62,7 +61,7 @@ def make_weights_plot(ax, weights):
 
       sp.axis('off')
       image = weights[i].reshape(-1, image_side)
-      im = sp.imshow(image, cmap = 'Blues', vmin=w_min_ca1, vmax=w_max_ca1, origin='lower')
+      im = sp.imshow(image, cmap = 'Blues', vmin=w_min, vmax=w_max, origin='lower')
 
   fig = ax.get_figure()
   fig.subplots_adjust(right=0.8)
@@ -74,7 +73,7 @@ def make_weights_plot(ax, weights):
 
  
 
-def initialize_plots(CA1, CA3):
+def initialize_plots(CA1, CA3, ENV):
 
 
         fig = plt.figure()
@@ -105,33 +104,33 @@ def initialize_plots(CA1, CA3):
         subsubfig[1].subplots_adjust(wspace=0., hspace=0.05)
 
 
-        ax0.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
-        ax0.plot([bounds_x[0],bounds_x[1]], [bounds_y[1],bounds_y[1]],c='k', ls='--',lw=0.5)
-        ax0.plot([bounds_x[0],bounds_x[1]], [bounds_y[0],bounds_y[0]],c='k', ls='--',lw=0.5)
-        ax0.plot([bounds_x[0],bounds_x[0]], [bounds_y[0],bounds_y[1]],c='k', ls='--',lw=0.5)
-        ax0.plot([bounds_x[1],bounds_x[1]], [bounds_y[0],bounds_y[1]],c='k', ls='--',lw=0.5)
-        ax0.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
-        #ax0.scatter(CA1.pc[104,0],CA1.pc[104,1], s=140, facecolors='none', edgecolors='r')
-        if offset_ca1!=offset_ca3:
+        ax0.plot(ENV.rew_center[0]+ENV.rew_radius*np.cos(np.linspace(-np.pi,np.pi,100)), ENV.rew_center[1]+ENV.rew_radius*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
+        ax0.plot([ENV.bounds_x[0],ENV.bounds_x[1]], [ENV.bounds_y[1],ENV.bounds_y[1]],c='k', ls='--',lw=0.5)
+        ax0.plot([ENV.bounds_x[0],ENV.bounds_x[1]], [ENV.bounds_y[0],ENV.bounds_y[0]],c='k', ls='--',lw=0.5)
+        ax0.plot([ENV.bounds_x[0],ENV.bounds_x[0]], [ENV.bounds_y[0],ENV.bounds_y[1]],c='k', ls='--',lw=0.5)
+        ax0.plot([ENV.bounds_x[1],ENV.bounds_x[1]], [ENV.bounds_y[0],ENV.bounds_y[1]],c='k', ls='--',lw=0.5)
+        ax0.scatter(CA1.place_model.pc[:,0],CA1.place_model.pc[:,1], s=1, label="CA1")
+        #ax0.scatter(CA1.place_model.pc[104,0],CA1.place_model.pc[104,1], s=140, facecolors='none', edgecolors='r')
+        if CA1.place_model.offset != CA3.neuron_model.offset:
             ax0.scatter(CA3.neuron_model.pc[:,0],CA3.neuron_model.pc[:,1], s=1, label ="CA3")
 
-        if obstacle:
-            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[1]], [obstacle_bounds_y[1],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[1]], [obstacle_bounds_y[0],obstacle_bounds_y[0]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x[0],obstacle_bounds_x[0]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x[1],obstacle_bounds_x[1]], [obstacle_bounds_y[0],obstacle_bounds_y[1]],c='k', ls='--',lw=0.5)
+        if ENV.obstacle:
+            ax0.plot([ENV.obs_x[0],ENV.obs_x[1]], [ENV.obs_y[1],ENV.obs_y[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x[0],ENV.obs_x[1]], [ENV.obs_y[0],ENV.obs_y[0]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x[0],ENV.obs_x[0]], [ENV.obs_y[0],ENV.obs_y[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x[1],ENV.obs_x[1]], [ENV.obs_y[0],ENV.obs_y[1]],c='k', ls='--',lw=0.5)
 
-        if obstacle_2:
-            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[1],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[0]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x_2[0],obstacle_bounds_x_2[0]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
-            ax0.plot([obstacle_bounds_x_2[1],obstacle_bounds_x_2[1]], [obstacle_bounds_y_2[0],obstacle_bounds_y_2[1]],c='k', ls='--',lw=0.5)
+        if ENV.obstacle_2:
+            ax0.plot([ENV.obs_x_2[0], ENV.obs_x_2[1]], [ENV.obs_y_2[1],ENV.obs_y_2[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x_2[0], ENV.obs_x_2[1]], [ENV.obs_y_2[0],ENV.obs_y_2[0]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x_2[0], ENV.obs_x_2[0]], [ENV.obs_y_2[0],ENV.obs_y_2[1]],c='k', ls='--',lw=0.5)
+            ax0.plot([ENV.obs_x_2[1], ENV.obs_x_2[1]], [ENV.obs_y_2[0],ENV.obs_y_2[1]],c='k', ls='--',lw=0.5)
 
         ax1.set_title('Policy')
-        ax1.plot(c[0]+r_goal*np.cos(np.linspace(-np.pi,np.pi,100)), c[1]+r_goal*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
+        ax1.plot(ENV.rew_center[0]+ENV.rew_radius*np.cos(np.linspace(-np.pi,np.pi,100)), ENV.rew_center[1]+ENV.rew_radius*np.sin(np.linspace(-np.pi,np.pi,100)),'b') #plot reward 1
         
-        ax1.scatter(CA1.pc[:,0],CA1.pc[:,1], s=1, label="CA1")
-        if offset_ca1!=offset_ca3:
+        ax1.scatter(CA1.place_model.pc[:,0],CA1.place_model.pc[:,1], s=1, label="CA1")
+        if CA1.place_model.offset != CA3.neuron_model.offset:
             ax1.scatter(CA3.neuron_model.pc[:,0],CA3.neuron_model.pc[:,1], s=1, label ="CA3")
 
         ax2.set_title('CA3 firing rates')
@@ -148,7 +147,7 @@ def initialize_plots(CA1, CA3):
 
 def update_plots(fig, trial, store_pos, starting_position,
                  firing_rate_store_AC, firing_rate_store_CA1,
-                 firing_rate_store_CA3, CA3, CA1, AC):
+                 firing_rate_store_CA3, CA3, CA1, AC, ENV):
 
     ax0, ax1, ax2, ax3, ax4, ax5, ax6 = fig.get_axes()[0:7]
 
@@ -168,23 +167,22 @@ def update_plots(fig, trial, store_pos, starting_position,
     ax0.set_title('Trial {} (L={:.1f})'.format(trial, L))
     
     if starting_position is not None:
-        ax0.plot(starting_position[0],starting_position[1],
-                'r',marker='o',markersize=5) 
+        ax0.plot(starting_position[0],starting_position[1], marker='$\U0001F42D$', color='black', markersize=20) 
 
     F1 = ax0.plot(trajectory[:, 0], trajectory[:,1])
     
     ####### POLICY #########
 
     if CA1.alpha == 0:
-        ac = np.dot(AC.actions, AC.neuron_model.W)/a0 #vector of preferred actions according to the weights
+        ac = np.dot(AC.actions, AC.neuron_model.W) #vector of preferred actions according to the weights
     elif CA1.alpha == 1:
-        ac = np.dot(AC.actions, np.dot(AC.neuron_model.W, CA1.w_ca3))/a0
+        ac = np.dot(AC.actions, np.dot(AC.neuron_model.W, CA1.SRM0_model.W))
     else:
-        ac = (1-CA1.alpha)*np.dot(AC.actions, AC.neuron_model.W)/a0 + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.w_ca3))/a0
+        ac = (1-CA1.alpha)*np.dot(AC.actions, AC.neuron_model.W)/AC.a + CA1.alpha*np.dot(AC.actions, np.dot(AC.w_ca1, CA1.SRM0_model.W))
 
 
     if CA1.alpha==0:
-        f4 = ax1.quiver(CA1.pc[:,0], CA1.pc[:,1], ac[0,:], ac[1,:])
+        f4 = ax1.quiver(CA1.place_model.pc[:,0], CA1.place_model.pc[:,1], ac[0,:], ac[1,:])
     else:
         f4 = ax1.quiver(CA3.neuron_model.pc[:,0], CA3.neuron_model.pc[:,1], ac[0,:], ac[1,:])
     
@@ -202,8 +200,8 @@ def update_plots(fig, trial, store_pos, starting_position,
 
     ############# WEIGHTS #################
 
-    colorbars.append(make_weights_plot(ax5, CA1.w_ca3))
-    colorbars.append(make_action_weights_plot(ax6, AC.neuron_model.W))
+    colorbars.append(make_weights_plot(ax5, CA1.SRM0_model.W, CA1.w_min, CA1.w_max))
+    colorbars.append(make_action_weights_plot(ax6, AC.neuron_model.W, AC.w_min, AC.w_max))
 
 
     #ax[1,2].set_yticks(ticks)

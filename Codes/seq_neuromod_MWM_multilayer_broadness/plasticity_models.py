@@ -2,23 +2,27 @@ import numpy as np
 
 class BCM:
 
-    def __init__(self, N,  memory_factor, weight_decay, base_weight):
+    def __init__(self, N, conf):
 
         self.num_neurons = N
-        self.weight_decay = weight_decay
-        self.base_weight = base_weight
-        self.memory_factor = memory_factor
+
+        self.weight_decay = conf['weight_decay']
+        self.base_weight = conf['base_weight']
+        self.memory_factor = conf['memory_factor']
+        self.learning_rate = conf['learning_rate']
 
         self.thetas = None
 
-    def get_update(self, x, y, weights, use_sum=False):
+    def get_update(self, x, y, use_sum=False, weights=None):
         """
         x is the pre-synaptic activity
         y is the post-synaptic acitivity
         """
     
         if use_sum:
-        
+            
+            assert weights is not None
+    
             y = np.einsum('ij,j->i',weights, x)
         
         current_thetas = self.compute_thetas(y)
@@ -36,14 +40,8 @@ class BCM:
         thetas = self.thetas.reshape(-1,1)
 
         dW = y*(y-thetas)*x 
-
-        if self.weight_decay!=0:
-
-            decay = weights - self.base_weight
-            decay = np.where(decay>0, decay, 0)
-            dW -= self.weight_decay * decay
-
-        return dW
+        
+        return self.learning_rate*dW
 
     def compute_thetas(self, y):
             
@@ -52,16 +50,13 @@ class BCM:
 
 class Plasticity_AC:
 
-    def __init__(self, N_out, N_in, 
-                 A_DA, tau_DA, tau_e_DA,
-                 A_5HT, tau_5HT, tau_e_5HT,
-                 A_ACh, tau_ACh):
+    def __init__(self, N_out, N_in, conf):
 
         self.N_out, self.N_in = N_out, N_in
 
-        self.A_DA, self.tau_DA, self.tau_e_DA = A_DA, tau_DA, tau_e_DA
-        self.A_5HT, self.tau_5HT, self.tau_e_5HT = A_5HT, tau_5HT, tau_e_5HT
-        self.A_ACh, self.tau_ACh = A_ACh, tau_ACh
+        self.A_DA, self.tau_DA, self.tau_e_DA = conf['A_DA'], conf['tau_DA'], conf['tau_e_DA']
+        self.A_5HT, self.tau_5HT, self.tau_e_5HT = conf['A_5HT'], conf['tau_5HT'], conf['tau_e_5HT']
+        self.A_ACh, self.tau_ACh = conf['A_ACh'], conf['tau_ACh']
 
         self.trace_DA = np.zeros([N_out, N_in])
         self.trace_5HT= np.zeros([N_out, N_in])
@@ -80,7 +75,7 @@ class Plasticity_AC:
         update_DA = self.get_update(rates_pre, rates_post, self.A_DA, self.tau_DA)
         self.trace_DA = self.trace_DA - self.trace_DA/self.tau_e_DA + update_DA
         
-        update_5HT = self.get_update(rates_pre, rates_post, self.A_5HT, self.tau_5HT)
+        update_5HT = - self.get_update(rates_pre, rates_post, self.A_5HT, self.tau_5HT)
         self.trace_5HT = self.trace_5HT - self.trace_DA/self.tau_e_5HT + update_5HT
 
     def release_ACh(self, rates_pre, rates_post):
@@ -88,7 +83,7 @@ class Plasticity_AC:
         rates_pre = rates_pre.reshape(1, -1)
         rates_post = rates_post.reshape(-1, 1)
 
-        return self.get_update(rates_pre, rates_post, self.A_ACh, self.tau_ACh)
+        return - self.get_update(rates_pre, rates_post, self.A_ACh, self.tau_ACh)
 
 
 

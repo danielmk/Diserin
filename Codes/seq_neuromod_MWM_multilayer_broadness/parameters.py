@@ -137,7 +137,6 @@ dx = 0.01 # length of bouncing back from walls
 """ CA3 parameters"""
 ca3_scale = 1.  # To what extent does CA1 receive CA3 input? (between 0 and 1)
 
-
 """BCM parameters"""
 memory_factor = 0.99
 weight_decay = 0.
@@ -146,11 +145,10 @@ eta_bcm = 1e-2
 
 """ Dict with all previous parameters, for saving configuration """
 # collect all global variables in a dict
-descriptor = globals().copy()
+conf = globals().copy()
 
 # remove builtin variables
-descriptor.pop('builtin_variables')
+conf.pop('builtin_variables')
 for key in builtin_variables:
-    descriptor.pop(key)
-
-
+    conf.pop(key)
+    

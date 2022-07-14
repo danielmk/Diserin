@@ -5,10 +5,9 @@ from neuron_models import *
 
 class CA3_layer:
 
-    def __init__(self, bounds_x, bounds_y, space_pc, offset, rho, sigma):
+    def __init__(self, conf):
 
-        self.neuron_model = Place_Cells(bounds_x, bounds_y, space_pc, offset,
-                                        rho, sigma)
+        self.neuron_model = Place_Cells(conf)
 
         self.N = self.neuron_model.N
         self.firing_rates = np.zeros(self.N)
@@ -17,200 +16,85 @@ class CA3_layer:
 
     def update_activity(self, pos):
         
-        self.firing_rates = self.neuron_model.get_firing_rates(pos)
-
-        self.spikes = np.random.rand(self.N) <= self.firing_rates
-
+        self.firing_rates, self.spikes = self.neuron_model.get_activity(pos, get_spikes=True)
 
 
 class CA1_layer:
 
-    def __init__(self, bounds_x, bounds_y, space_pc, offset,
-                       rho_pc, sigma,
-                       tau_m, tau_s, eps0,
-                       chi, rho,
-                       theta, delta_u,
-                       alpha,
-                       N_ca3,
-                       w_min, w_max,
-                       w_ca1_init, max_init, sigma_init,
-                       smooth_firing, tau_gamma, v_gamma):
+    def __init__(self, N_ca3, conf):
 
-        self.rho_pc, self.sigma_sq = rho_pc, sigma**2
+        self.place_model = Place_Cells(conf)
 
-        if offset:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1], space_pc)+space_pc/2,2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1], space_pc)+space_pc/2,2)
-        else:
-            x_pc = np.round(np.arange(bounds_x[0], bounds_x[1]+space_pc, space_pc),2)
-            y_pc = np.round(np.arange(bounds_y[0], bounds_y[1]+space_pc, space_pc),2)
-        
-        xx, yy = np.meshgrid(x_pc, y_pc)
-
-        self.pc = np.stack([xx,yy], axis=2).reshape(-1,2)
-        self.N = self.pc.shape[0] #number of place cells
+        self.N = self.place_model.N
         self.N_in = N_ca3
 
-        self.tau_m, self.tau_s, self.eps0 = tau_m, tau_s, eps0
-        self.chi = chi
-        self.rho = rho
-        self.theta, self.delta_u = theta, delta_u
-        self.alpha = alpha
+        self.SRM0_model = SRM0(N_ca3, self.N, conf) 
 
-        self.epsp_decay = np.zeros((self.N, self.N_in))
-        self.epsp_rise = np.zeros((self.N, self.N_in))
-
-        self.last_spike_time = np.zeros(self.N)-1000
+        self.alpha = conf['alpha']
 
         # activity state
         self.spikes = np.zeros(self.N)
         self.firing_rates = np.zeros(self.N)
 
         # weights
-        self.w_min = w_min
-        self.w_max = w_max
-        self.w_ca3 = self._initilialize_weights(w_ca1_init, max_init, sigma_init)
+        self.w_min = conf['w_min']
+        self.w_max = conf['w_max']
 
-        self.smooth_firing = smooth_firing
-        if self.smooth_firing:
-            self.tau_gamma, self.v_gamma = tau_gamma, v_gamma
-            self.rho_decay = np.zeros(self.N)
-            self.rho_rise = np.zeros(self.N)
-        
 
     def update_activity(self, pos, spikes, time):
 
-        positional_firing_rate, lambda_u = 0, 0
+        if self.alpha == 0:  
 
-        if self.alpha != 1:  
-            positional_firing_rate = self.rho_pc * np.exp(- ((pos-self.pc)**2).sum(axis=1) * (1./self.sigma_sq) )
+            self.firing_rates = self.place_model.get_activity(pos)
         
-        if self.alpha != 0:
+        elif self.alpha == 1:
 
-            self.epsp_decay = self.epsp_decay - self.epsp_decay*(1./self.tau_m) + spikes*self.w_ca3
-            self.epsp_rise = self.epsp_rise - self.epsp_rise*(1./self.tau_s) + spikes*self.w_ca3
+            self.firing_rates = self.SRM0_model.get_activity(spikes,time)
 
-            EPSP = self.eps0*(self.epsp_decay - self.epsp_rise)*(1./(self.tau_m - self.tau_s))
-            EPSP = EPSP.sum(axis=1)
+        else:
+            
+            lambda_pos = self.place_model.get_activity(pos)
+            lambda_u   = self.SRM0_model.get_activity(spikes, time)
 
-            u = EPSP + self.chi*np.exp(-(time - self.last_spike_time)*(1./self.tau_m))
-            lambda_u = self.rho*np.exp((u-self.theta)*(1./self.delta_u))
-        
-
-        self.firing_rates = self.alpha*lambda_u + (1-self.alpha)*positional_firing_rate
-
-        if self.firing_rates.max()>0.4:
-            self.firing_rates = self.firing_rates*(1./self.firing_rates.max()*0.4)
+            self.firing_rates = self.alpha*lambda_u + (1-self.alpha)*lambda_pos
 
         self.spikes = np.random.rand(self.N) <= self.firing_rates
-    
-        self.last_spike_time[self.spikes] = time
-        self.epsp_rise[self.spikes] = 0
-        self.epsp_decay[self.spikes] = 0
 
-        if self.smooth_firing:
-
-            self.rho_decay = self.rho_decay - self.rho_decay/self.tau_gamma + self.spikes
-            self.rho_rise =  self.rho_rise -  self.rho_rise/self.v_gamma + self.spikes
-
-            self.firing_rates = (self.rho_decay - self.rho_rise)*(1./(self.tau_gamma - self.v_gamma))
 
     def update_weights(self, update):
 
-        self.w_ca3 += update
+        self.SRM0_model.W += update
 
-        self.w_ca3 = np.clip(self.w_ca3, self.w_min, self.w_max)
-
-    
-    def _convolutional_initialization(self, maximum, sigma, gaus):
-
-        weights = np.zeros((self.N, self.N_in))
-
-        assert self.N == self.N_in
-
-        for i in range(self.N):
-
-            for j in range(self.N_in):
-
-                dst = np.sqrt(((self.pc[i] - self.pc[j])**2).sum())
-
-                if gaus==True:
-
-                    weights[i,j] =  maximum*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
-
-                else:
-
-                    if dst<sigma:
-
-                        weights[i,j] = maximum*np.random.rand()
-
-        return weights
-
-
-    def _initilialize_weights(self, option, max_init, sigma_init):
-
-        if option == 'convolutional':
-            return self._convolutional_initialization(max_init, sigma_init, gaus=True)
-
-        if option == 'uniform-convolutional':
-            return self._convolutional_initialization(max_init, sigma_init, gaus=False)
-
-        if option == 'all_ones':
-            return np.ones((self.N, self.N_in))
-        
-        if option == 'random':
-            return np.random.rand(self.N, self.N_in) 
-
-        if option =='identity':
-            return np.eye(self.N)
-        
-
-    def update_activity_simple_mode(self, rates_ca3):
-
-        self.firing_rates = np.einsum('ij, j -> i', self.w_ca3, rates_ca3)
-        self.firing_rates = self.firing_rates/self.firing_rates.max()*0.4
-        self.spikes = np.random.rand(self.N) <= self.firing_rates
-
-
+        self.SRM0_model.W = np.clip(self.SRM0_model.W, self.w_min, self.w_max)
 
 
 class Action_layer:
 
-    def __init__(self, N_in, N_out,
-                       tau_m, tau_s, eps0, chi,
-                       rho, theta, delta_u,
-                       tau_gamma, v_gamma,
-                       a0, psi, w_minus, w_plus,
-                       weight_decay, base_weight, w_min, w_max, 
-                       use_fixed_step, fixed_step):
+    def __init__(self, N_in, conf):
 
-        self.neuron_model = SRM0(   N_in, N_out,
-                                    tau_m, tau_s, eps0,
-                                    chi,
-                                    rho, theta, delta_u,
-                                    tau_gamma, v_gamma,
-                                    True, psi, w_minus, w_plus,) 
-        self.N = N_out
+        self.N = conf['N']
         self.N_in = N_in
+
+        self.neuron_model = SRM0(N_in, self.N, conf) 
         
         self.firing_rates = np.zeros(self.N)
         self.spikes = np.zeros(self.N)
 
         # to produce action
         self.thetas = 2*np.pi*np.arange(1,self.N+1)*(1./self.N)
-        self.actions = a0*np.array([np.cos(self.thetas), np.sin(self.thetas)]) #possible actions (x,y)
-        self.fixed_step = fixed_step if use_fixed_step else None
+        self.actions = conf['a0']*np.array([np.cos(self.thetas), np.sin(self.thetas)])
+        self.fixed_step = conf['fixed_step'] if conf['use_fixed_step'] else None
 
         # To handle weights updates
-        self.weight_decay = weight_decay
-        self.base_weight = base_weight
-        self.w_min = w_min
-        self.w_max = w_max     
+        self.weight_decay = conf['weight_decay']
+        self.base_weight = conf['base_weight']
+        self.w_min = conf['w_min']
+        self.w_max = conf['w_max']     
          
 
     def update_activity(self, spikes_ca1, time):
         
-        self.firing_rates, self.spikes = self.neuron_model.get_activity(spikes_ca1, time)
+        self.firing_rates, self.spikes = self.neuron_model.get_activity(spikes_ca1, time, get_spikes=True)
         
 
     def update_weights(self, update):
