@@ -11,8 +11,11 @@ def feedforward_weights_initiliazation(N_out, N_in, conf):
     elif option == 'convolutional':
         return convolutional_initialization(N_out, N_in, conf, gaus=True)
 
+    elif option == 'random-convolutional':
+        return convolutional_initialization(N_out, N_in, conf, rand=True)
+
     elif option == 'uniform-convolutional':
-        return convolutional_initialization(N_out, N_in, conf, gaus=False)
+        return convolutional_initialization(N_out, N_in, conf, unif=True)
 
     elif option == 'all_ones':
         return np.ones((N_out, N_in))
@@ -43,14 +46,14 @@ def lateral_weights_initialization(N_out, conf):
         f = np.exp(conf['psi']*np.cos(diff_theta)) #lateral connectivity function
         np.fill_diagonal(f,0)
         W = conf['w_minus']*(1./N_out) + conf['w_plus']*f/f.sum(axis=0) #lateral connectivity action neurons
-        
+
         return W
 
     else:
         print("Invalid option for weights initialization!")
         exit()
 
-def convolutional_initialization(N_out, N_in, conf, gaus):
+def convolutional_initialization(N_out, N_in, conf, gaus=False, rand=False, unif=False):
 
     maximum = conf['max_init']
     sigma = conf['sigma_init']
@@ -83,10 +86,13 @@ def convolutional_initialization(N_out, N_in, conf, gaus):
 
                 weights[i,j] =  maximum*np.exp(-( (dst)**2 / ( 2.0 * sigma**2 ) ) )
 
-            else:
+            elif dst<sigma:
 
-                if dst<sigma:
+                    if rand==True:
+                        weights[i,j] = maximum*np.random.rand()
+                    if unif==True:
+                        weights[i,j] = maximum
+            
 
-                    weights[i,j] = maximum*np.random.rand()
 
     return weights

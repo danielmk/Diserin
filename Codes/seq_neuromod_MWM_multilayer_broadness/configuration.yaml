@@ -1,4 +1,4 @@
-random_seed: 1
+random_seed: 0
 output_name: 'simulation_0' # the results will be saved as 'output_name.pickle'
 
 num_agents: 1
@@ -54,13 +54,13 @@ CA1:
   alpha: 1 #!
 
   # SRM0
-  eps0: 100  #!
+  rho0: 0.4 #!
+  eps0: 100  #!  
   tau_m: 20  #!
   tau_s: 5   #!
   chi: -5  #!
-  rho0: 60 #!
   theta: 16  #!
-  delta_u: 2 #!
+  delta_u: 1 #!
 
   smooth_firing: True #!
   tau_gamma: 50 #!
@@ -68,11 +68,11 @@ CA1:
 
   # Weights
   w_min: 0
-  w_max: 3
+  w_max: 10
 
-  w_feedforward_init: 'identity' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
+  w_feedforward_init: 'uniform-convolutional' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
   max_init: 3. #!
-  sigma_init: 0.2 #!
+  sigma_init: 0.5 #!
 
   w_lateral_init: 'None' # options: None
 
@@ -82,9 +82,9 @@ CA1:
   use_sum: False
   memory_factor: 0.9
   learning_rate: 0.02
-  
+
   weight_decay: 0.
-  base_weight: 2.
+  base_weight: 1.5
 
 AC:
 
@@ -95,7 +95,7 @@ AC:
   tau_m: 20 #membrane time constant
   tau_s: 5 #synaptic time rise epsp
   chi  : -5 #scaling constant refractory effect
-  rho0: 0.06 #scaling rate
+  rho0: 0.4 #scaling rate
   theta: 16 #threshold
   delta_u: 5 #escape noise
 
@@ -105,11 +105,11 @@ AC:
 
 
   # Weights
-  w_min: 1
-  w_max: 3
+  w_min: 0
+  w_max: 10
 
   w_feedforward_init: 'all_equal'
-  max_init: 2
+  max_init: 5
   w_lateral_init: 'standard'
 
   weight_decay: 0.
@@ -121,7 +121,7 @@ AC:
 
   # Action
   a0: 0.08 # action
-  fixed_step: 0.003 # velocity with 0.003 = 0.3m/s
+  fixed_step: 0.001 # units= 1000*0.5 m/s (with fixed_step=0.0004, v=0.2 m/s)
   use_fixed_step: True
 
   # Plasticity
@@ -129,15 +129,13 @@ AC:
   Serotonine: True
   Acetylcholine: True
 
-  A_DA: 0.2 # STDP magnitude of dopamine
-  A_5HT: 0.01 # STDP magnitude of serotonin
-  A_ACh: 0.01 # STDP magnitude of acetylcholine
+  A_DA:  0.05 # STDP magnitude of dopamine
+  A_5HT: 0.005 # STDP magnitude of serotonin
+  A_ACh: 0.005 # STDP magnitude of acetylcholine
 
-  tau_5HT: 10 # Time constant for the STDP window of serotonin
   tau_DA: 10 # Time constant for the STDP window of dopamine
+  tau_5HT: 10 # Time constant for the STDP window of serotonin
   tau_ACh: 10
 
   tau_e_DA: 2000 #time constant eligibility trace
   tau_e_5HT: 5000 #time constant eligibility trace for serotonin
-
-  

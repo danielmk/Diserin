@@ -76,7 +76,7 @@ class Plasticity_AC:
         self.trace_DA = self.trace_DA - self.trace_DA/self.tau_e_DA + update_DA
         
         update_5HT = - self.get_update(rates_pre, rates_post, self.A_5HT, self.tau_5HT)
-        self.trace_5HT = self.trace_5HT - self.trace_DA/self.tau_e_5HT + update_5HT
+        self.trace_5HT = self.trace_5HT - self.trace_5HT/self.tau_e_5HT + update_5HT
 
     def release_ACh(self, rates_pre, rates_post):
 

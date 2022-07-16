@@ -165,7 +165,7 @@ def episode_run(episode):
             ## position update
 
             position, wall_hit, reward_found = environment.update_position(position, a)
-            
+                        
             if conf['AC']['Acetylcholine'] and wall_hit:
                 
                 AC.update_weights(plasticity_AC.release_ACh(CA1.firing_rates, AC.firing_rates))
