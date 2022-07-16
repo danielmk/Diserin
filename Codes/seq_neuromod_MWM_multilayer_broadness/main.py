@@ -1,15 +1,13 @@
 import sys
-sys.path.extend(['./', '../', './Codes/'])
-
-from numba import jit, cuda
 import os
-import numpy as np
 import time
-import multiprocessing
 import pickle
 import psutil
 from tqdm import tqdm
-import time
+sys.path.extend(['./', '../', './Codes/'])
+
+import numpy as np
+import multiprocessing
 import yaml
 
 from layers import *
@@ -18,6 +16,7 @@ from utils import *
 from plasticity_models import *
 from environment import *
 
+
 parameter_file = sys.argv[-1]
 
 with open(parameter_file, 'r') as stream:
@@ -25,8 +24,6 @@ with open(parameter_file, 'r') as stream:
         conf = yaml.safe_load(stream)
     except yaml.YAMLError as exc:
         print(exc)
-
-options = conf['OPTIONS']
 
 def main():
 
@@ -99,7 +96,7 @@ def episode_run(episode):
     initial_weights = {'CA1': CA1.SRM0_model.W.copy(),
                        'AC': AC.neuron_model.W.copy()}
 
-    if options['save_activity'] or options['plot_flag']:  
+    if conf['save_activity'] or conf['plot_flag']:  
 
         firing_rate_store_AC = np.zeros([AC.N,   conf['T_max'], conf['num_trials']]) #stores firing rates action neurons (for plotting)
         firing_rate_store_CA1 = np.zeros([CA1.N, conf['T_max'], conf['num_trials']])
@@ -107,7 +104,7 @@ def episode_run(episode):
 
 
     ## initialize plot open field
-    if options['plot_flag']:
+    if conf['plot_flag']:
 
         fig= initialize_plots(CA1, CA3, environment)
 
@@ -135,7 +132,7 @@ def episode_run(episode):
             # store variables for plotting/saving
             store_pos[trial, t_trial, :] = position
 
-            if options['save_activity'] or options['plot_flag']:
+            if conf['save_activity'] or conf['plot_flag']:
                 firing_rate_store_CA3[:,t_trial,trial] = CA3.firing_rates
                 firing_rate_store_CA1[:,t_trial,trial] = CA1.firing_rates
                 firing_rate_store_AC[:,t_trial,trial] = AC.firing_rates 
@@ -196,7 +193,7 @@ def episode_run(episode):
             AC.update_weights(plasticity_AC.trace_5HT)
 
         ## plot
-        if options['plot_flag']:
+        if conf['plot_flag']:
             
             update_plots(fig,trial, store_pos, starting_position,
                          firing_rate_store_AC, firing_rate_store_CA1,
@@ -207,7 +204,7 @@ def episode_run(episode):
                 'rewarding_times': rewarding_times,
                 'trajectories': store_pos,
                 'initial_weights': initial_weights,
-                'final_weights': {'CA1': CA1.SRM0_model.w_ca3,
+                'final_weights': {'CA1': CA1.SRM0_model.W,
                                   'AC' : AC.neuron_model.W}}
     
     if conf['save_activity']:

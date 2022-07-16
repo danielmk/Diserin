@@ -2,13 +2,11 @@ random_seed: 0
 output_name: 'simulation_0' # the results will be saved as 'output_name.pickle'
 
 num_agents: 1
-num_trials: 40
+num_trials: 2
 T_max:  15000
 
-OPTIONS:
-
-  plot_flag: True
-  save_activity: False
+plot_flag: True
+save_activity: False
 
 
 GEOMETRY:
