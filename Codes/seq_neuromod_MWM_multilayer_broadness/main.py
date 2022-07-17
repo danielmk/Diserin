@@ -2,13 +2,13 @@ import sys
 import os
 import time
 import pickle
-import psutil
-from tqdm import tqdm
 sys.path.extend(['./', '../', './Codes/'])
 
 import numpy as np
 import multiprocessing
+import psutil
 import yaml
+from tqdm import tqdm
 
 from layers import *
 from plot_functions import *
@@ -40,7 +40,9 @@ def main():
         pool = multiprocessing.Pool(os.cpu_count() - 1)
 
         for episode in range(0, conf['num_agents']):
-            print('Episode',episode)
+
+            if conf['verbose']:
+                print('Episode',episode)
 
             results.append(pool.apply_async(episode_run,(episode,)))
             
@@ -56,7 +58,8 @@ def main():
         pool.close()
         pool.join()
 
-        print("Done! Simulation time: {:.2f} minutes.".format((time.time()-start)/60))
+        if conf['verbose']:
+            print("Done! Simulation time: {:.2f} minutes.".format((time.time()-start)/60))
 
     with open(conf['output_name']+'.pickle', 'wb') as myfile:
 
@@ -75,7 +78,8 @@ def episode_run(episode):
     rewarding_trials = np.zeros(conf['num_trials'])
     rewarding_times  = np.zeros(conf['num_trials']) - 1
     
-    print('Initiated episode:',episode)
+    if conf['verbose']:
+        print('Initiated episode:',episode)
 
     ## Place cells positions
 
@@ -124,10 +128,11 @@ def episode_run(episode):
 
         position = starting_position.copy()
         t_trial = 0
+        
+        if conf['verbose']:
+            print('Episode:', episode, 'Trial:', trial, flush=True)
 
-        print('Episode:', episode, 'Trial:', trial, flush=True)
-
-        for t_trial in tqdm(range(conf['T_max'])):                    
+        for t_trial in tqdm(range(conf['T_max']), disable = not conf['verbose']):                    
 
             # store variables for plotting/saving
             store_pos[trial, t_trial, :] = position
@@ -175,7 +180,9 @@ def episode_run(episode):
                 if not ever_rewarded_flag:
 
                     ever_rewarded_flag = True
-                    print('First reward,episode',episode,'trial', trial)
+
+                    if conf['verbose']:
+                        print('First reward,episode',episode,'trial', trial)
 
                 break
 
