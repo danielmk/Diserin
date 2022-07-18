@@ -1,12 +1,12 @@
 random_seed: 0
 output_name: 'simulation_0' # the results will be saved as 'output_name.pickle'
 
-num_agents: 10
-num_trials: 20
+num_agents: 1
+num_trials: 40
 T_max:  15000
 
 verbose: False
-plot_flag: False
+plot_flag: True
 save_activity: False
 
 
@@ -17,16 +17,16 @@ GEOMETRY:
   rew_center: [-0.75, -0.75]
   rew_radius: 0.15
 
-  obstacle_1: False
+  obstacle_1: True
   obstacle_2: False
 
   starting_position_option: 'origin' # option: 'origin', 'random', 'upper-right'
 
-  obstacle_bounds_x: [-1., -0.8]
-  obstacle_bounds_y: [-2, 0.]
+  obstacle_bounds_x: [-0.5, -0.4]
+  obstacle_bounds_y: [-1, 0.]
 
-  obstacle_bounds_x_2: [0.8, 1]
-  obstacle_bounds_y_2: [0., 2.]
+  obstacle_bounds_x_2: [0.4, 0.5]
+  obstacle_bounds_y_2: [0., 1.]
 
 
 CA3:

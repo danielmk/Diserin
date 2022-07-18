@@ -19,8 +19,8 @@ class MWM:
 
         if self.obstacle_2:
 
-            self.obs_x_2 = conf['obs_x_2']
-            self.obs_y_2 = conf['obs_y_2']
+            self.obs_x_2 = conf['obstacle_bounds_x_2']
+            self.obs_y_2 = conf['obstacle_bounds_y_2']
 
     def update_position(self, position, step):
         
