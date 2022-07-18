@@ -31,7 +31,7 @@ def objective_performance(trial):
     results = []
     for episode in range(0, conf['num_agents']):
 
-        results.append(pool.apply_async(episode_run,(episode,)))
+        results.append(pool.apply_async(episode_run,(episode, conf)))
         
         current_process = psutil.Process()
         children = current_process.children(recursive=True)

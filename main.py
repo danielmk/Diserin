@@ -17,15 +17,15 @@ from plasticity_models import *
 from environment import *
 
 
-parameter_file = sys.argv[-1]
-
-with open(parameter_file, 'r') as stream:
-    try:
-        conf = yaml.safe_load(stream)
-    except yaml.YAMLError as exc:
-        print(exc)
-
 def main():
+
+    parameter_file = sys.argv[-1]
+
+    with open(parameter_file, 'r') as stream:
+        try:
+            conf = yaml.safe_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
 
     start = time.time()
 
@@ -33,7 +33,7 @@ def main():
 
     if conf['num_agents']==1:
         
-        results.append(episode_run(0))
+        results.append(episode_run(0, conf))
 
     else:
 
@@ -44,7 +44,7 @@ def main():
             if conf['verbose']:
                 print('Episode',episode)
 
-            results.append(pool.apply_async(episode_run,(episode,)))
+            results.append(pool.apply_async(episode_run,(episode, conf)))
             
             current_process = psutil.Process()
             children = current_process.children(recursive=True)
@@ -66,7 +66,7 @@ def main():
         pickle.dump((conf,results), myfile)
 
     
-def episode_run(episode):
+def episode_run(episode, conf):
 
     # different random seed for each pool
     np.random.seed(conf['random_seed'] + episode)
