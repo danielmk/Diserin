@@ -70,8 +70,8 @@ CA1:
   w_max: 10
 
   w_feedforward_init: 'uniform-convolutional' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
-  max_init: 3. #!
-  sigma_init: 0.5 #!
+  max_init: 5. #!
+  sigma_init: 0.3 #!
 
   w_lateral_init: 'None' # options: None
 
@@ -128,8 +128,8 @@ AC:
   Serotonine: True
   Acetylcholine: True
 
-  A_DA:  0.05 # STDP magnitude of dopamine
-  A_5HT: 0.005 # STDP magnitude of serotonin
+  A_DA:  0.02 # STDP magnitude of dopamine
+  A_5HT: 0.001 # STDP magnitude of serotonin
   A_ACh: 0.005 # STDP magnitude of acetylcholine
 
   tau_DA: 10 # Time constant for the STDP window of dopamine

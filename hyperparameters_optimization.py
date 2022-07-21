@@ -13,16 +13,43 @@ with open(parameter_file, 'r') as stream:
         print(exc)
 
 
-def objective_performance(trial):
 
+def exploration_performance(results):
     """
-    Objective to maximize the probability of finding rewards in the last 5 trials.
+    Probability of finding the reward at least one time in the first 20 trials
     """
+
+    num_agents = len(results)
     
-    conf['AC']['A_DA'] = trial.suggest_float('A_DA', 0.001, 0.1)
-    conf['AC']['A_5HT'] = trial.suggest_float('A_5HT', 0.001, 0.1)
-    conf['AC']['A_ACh'] = trial.suggest_float('A_ACh', 0.001, 0.1)
-    conf['AC']['w_max'] = trial.suggest_int('w_max_ac', 1, 10)
+    for result in results:
+        
+        if results['rewarding_trials'][:20].sum()>0:
+
+            success += 1
+    
+    return 1 - success/num_agents
+
+def learning_performance(results):
+    """
+    Probability of not finding the reward in the last 5 trials.
+    """
+
+    num_agents = len(results)
+    success = np.zeros(5)
+    for result in results:
+        
+        success += result['rewarding_trials'][-5:]
+
+    return 1 - (success/num_agents).mean()
+
+
+def objective(trial):
+    
+    
+    conf['AC']['A_DA'] = trial.suggest_float('A_DA', 0.01, 0.5)
+    conf['AC']['A_5HT'] = trial.suggest_float('A_5HT', 0.0001, 0.01)
+    conf['AC']['A_ACh'] = trial.suggest_float('A_ACh', 0.001, 0.01)
+    conf['AC']['w_max'] = trial.suggest_int('w_max_ac', 10, 100)
     
 
     # Run all episodes
@@ -47,18 +74,14 @@ def objective_performance(trial):
 
     # Compute average number of successive agents at the last trial
 
-    counter = 0
-    success = np.zeros(5)
-    for result in results:
-        
-        success += result['rewarding_trials'][-5:]
-        counter += 1
+    obj1 = learning_performance(results)
+    obj2 = exploration_performance(results)
 
-    return 1 - (success/counter).mean()
+    return obj2
 
 
 study = optuna.create_study()
-study.optimize(objective_performance, n_trials=100)
+study.optimize(objective, n_trials=100)
 
 print(study.best_params)  # E.g. {'x': 2.002108042}
 
