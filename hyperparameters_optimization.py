@@ -20,6 +20,7 @@ def exploration_performance(results):
     """
 
     num_agents = len(results)
+    success = 0
     
     for result in results:
         
