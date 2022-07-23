@@ -23,7 +23,7 @@ def exploration_performance(results):
     
     for result in results:
         
-        if results['rewarding_trials'][:20].sum()>0:
+        if result['rewarding_trials'][:20].sum()>0:
 
             success += 1
     
