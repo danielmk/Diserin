@@ -106,6 +106,11 @@ def episode_run(episode, conf):
         firing_rate_store_CA1 = np.zeros([CA1.N, conf['T_max'], conf['num_trials']])
         firing_rate_store_CA3 = np.zeros([CA3.N, conf['T_max'], conf['num_trials']])
 
+    if conf['save_weights']:
+
+        weights_store_CA1 = np.empty((conf['num_trials'], CA1.N, CA1.N_in))
+        weights_store_AC = np.empty((conf['num_trials'], AC.N, AC.N_in))
+
 
     ## initialize plot open field
     if conf['plot_flag']:
@@ -131,6 +136,11 @@ def episode_run(episode, conf):
         
         if conf['verbose']:
             print('Episode:', episode, 'Trial:', trial, flush=True)
+
+        if conf['save_weights']:
+
+            weights_store_CA1[trial] = CA1.SRM0_model.W
+            weights_store_AC[trial] = AC.neuron_model.W
 
         for t_trial in tqdm(range(conf['T_max']), disable = not conf['verbose']):                    
 
@@ -209,10 +219,13 @@ def episode_run(episode, conf):
     returns = { 'episode':episode,  
                 'rewarding_trials':rewarding_trials, 
                 'rewarding_times': rewarding_times,
-                'trajectories': store_pos,
-                'initial_weights': initial_weights,
-                'final_weights': {'CA1': CA1.SRM0_model.W,
-                                  'AC' : AC.neuron_model.W}}
+                'trajectories': store_pos }
+
+
+    if conf['save_weights']:
+        
+        returns['weights'] = {'CA1': weights_store_CA1,
+                              'AC' : weights_store_AC}
     
     if conf['save_activity']:
 

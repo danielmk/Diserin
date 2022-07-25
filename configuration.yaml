@@ -2,11 +2,12 @@ random_seed: 0
 output_name: 'simulation_0' # the results will be saved as 'output_name.pickle'
 
 num_agents: 1
-num_trials: 40
+num_trials: 2
 T_max:  15000
 
 verbose: False
 plot_flag: True
+save_weights: True
 save_activity: False
 
 
@@ -17,7 +18,7 @@ GEOMETRY:
   rew_center: [-0.75, -0.75]
   rew_radius: 0.15
 
-  obstacle_1: True
+  obstacle_1: False
   obstacle_2: False
 
   starting_position_option: 'origin' # option: 'origin', 'random', 'upper-right'
@@ -71,16 +72,16 @@ CA1:
 
   w_feedforward_init: 'uniform-convolutional' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
   max_init: 5. #!
-  sigma_init: 0.3 #!
+  sigma_init: 1.2 #!
 
   w_lateral_init: 'None' # options: None
 
   # Plasticity (BCM)
-  plasticity_ON: False
+  plasticity_ON: True
 
   use_sum: False
-  memory_factor: 0.9
-  learning_rate: 0.02
+  memory_factor: 0.83
+  learning_rate: 0.001 
 
   weight_decay: 0.
   base_weight: 1.5
@@ -115,8 +116,8 @@ AC:
   base_weight: 2.
 
   psi: 20 # the higher, the more narrow the range of excitation
-  w_minus: -300 # (consider decreasing it)
-  w_plus: 100
+  w_minus: -600 # (consider decreasing it)
+  w_plus: 200
 
   # Action
   a0: 0.08 # action
