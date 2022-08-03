@@ -1,39 +1,39 @@
-random_seed: 0
+random_seed: 40
 output_name: 'simulation_0' # the results will be saved as 'output_name.pickle'
 
 num_agents: 1
-num_trials: 2
+num_trials: 80
 T_max:  15000
 
 verbose: False
 plot_flag: True
-save_weights: True
+save_weights: False
 save_activity: False
 
 
 GEOMETRY:
 
-  bounds_x: [-1, 1] 
-  bounds_y: [-1, 1]
-  rew_center: [-0.75, -0.75]
-  rew_radius: 0.15
+  bounds_x: [-2, 2] 
+  bounds_y: [-2, 2]
+  rew_center: [-1.5, -1.5]
+  rew_radius: 0.3
 
   obstacle_1: False
   obstacle_2: False
 
   starting_position_option: 'origin' # option: 'origin', 'random', 'upper-right'
 
-  obstacle_bounds_x: [-0.5, -0.4]
-  obstacle_bounds_y: [-1, 0.]
+  obstacle_bounds_x: [-1, -0.8]
+  obstacle_bounds_y: [-2, 0.]
 
-  obstacle_bounds_x_2: [0.4, 0.5]
-  obstacle_bounds_y_2: [0., 1.]
+  obstacle_bounds_x_2: [0.8, 1]
+  obstacle_bounds_y_2: [0., 2.]
 
 
 CA3:
 
-  bounds_x: [-1, 1]
-  bounds_y: [-1, 1]
+  bounds_x: [-2, 2]
+  bounds_y: [-2, 2]
   space_pc: 0.4
   offset: False
 
@@ -43,8 +43,8 @@ CA3:
 
 CA1:
 
-  bounds_x: [-1, 1] 
-  bounds_y: [-1, 1]
+  bounds_x: [-2, 2] 
+  bounds_y: [-2, 2]
   space_pc: 0.4 #!
   offset: False
 
@@ -54,25 +54,25 @@ CA1:
   alpha: 1 #!
 
   # SRM0
-  rho0: 0.4 #!
+  rho0: 0.06 #!
   eps0: 100  #!  
   tau_m: 20  #!
   tau_s: 5   #!
-  chi: -5  #!
+  chi: -0.5  #!
   theta: 16  #!
-  delta_u: 1 #!
+  delta_u: 2 #!
 
-  smooth_firing: True #!
+  smooth_firing: False #!
   tau_gamma: 50 #!
   v_gamma: 20 #!
 
   # Weights
   w_min: 0
-  w_max: 10
+  w_max: 3
 
-  w_feedforward_init: 'uniform-convolutional' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
-  max_init: 5. #!
-  sigma_init: 1.2 #!
+  w_feedforward_init: 'random' # option: 'convolutional', 'identity', 'random', 'uniform-convolutional'
+  max_init: 2. #!
+  sigma_init: 100 #!
 
   w_lateral_init: 'None' # options: None
 
@@ -80,22 +80,22 @@ CA1:
   plasticity_ON: True
 
   use_sum: False
-  memory_factor: 0.83
-  learning_rate: 0.001 
+  memory_factor: 0.99
+  learning_rate: 0.02
 
   weight_decay: 0.
   base_weight: 1.5
 
 AC:
 
-  N: 16
+  N: 40
 
   # SRM0
   eps0 : 20 #scaling constant epsp
   tau_m: 20 #membrane time constant
   tau_s: 5 #synaptic time rise epsp
   chi  : -5 #scaling constant refractory effect
-  rho0: 0.4 #scaling rate
+  rho0: 0.06 #scaling rate
   theta: 16 #threshold
   delta_u: 5 #escape noise
 
@@ -105,33 +105,33 @@ AC:
 
 
   # Weights
-  w_min: 0
-  w_max: 10
+  w_min: 1
+  w_max: 3
 
   w_feedforward_init: 'all_equal'
-  max_init: 5
+  max_init: 2
   w_lateral_init: 'standard'
 
   weight_decay: 0.
   base_weight: 2.
 
   psi: 20 # the higher, the more narrow the range of excitation
-  w_minus: -600 # (consider decreasing it)
-  w_plus: 200
+  w_minus: -300 # (consider decreasing it)
+  w_plus: 100
 
   # Action
   a0: 0.08 # action
-  fixed_step: 0.001 # units= 1000*0.5 m/s (with fixed_step=0.0004, v=0.2 m/s)
+  fixed_step: 0.003 # units= 1000*0.5 m/s (with fixed_step=0.0004, v=0.2 m/s)
   use_fixed_step: True
 
   # Plasticity
   Dopamine: True
-  Serotonine: True
+  Serotonine: False
   Acetylcholine: True
 
-  A_DA:  0.02 # STDP magnitude of dopamine
-  A_5HT: 0.001 # STDP magnitude of serotonin
-  A_ACh: 0.005 # STDP magnitude of acetylcholine
+  A_DA:  0.2 # STDP magnitude of dopamine
+  A_5HT: 0.005 # STDP magnitude of serotonin
+  A_ACh: 0.01 # STDP magnitude of acetylcholine
 
   tau_DA: 10 # Time constant for the STDP window of dopamine
   tau_5HT: 10 # Time constant for the STDP window of serotonin
