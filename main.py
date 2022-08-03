@@ -97,8 +97,6 @@ def episode_run(episode, conf):
 
     ## initialise variables
     store_pos = np.zeros([conf['num_trials'], conf['T_max'], 2]) # stores trajectories (for plotting)
-    initial_weights = {'CA1': CA1.SRM0_model.W.copy(),
-                       'AC': AC.neuron_model.W.copy()}
 
     if conf['save_activity'] or conf['plot_flag']:  
 

@@ -40,6 +40,9 @@ class CA1_layer:
         self.w_min = conf['w_min']
         self.w_max = conf['w_max']
 
+        self.weight_decay = conf['weight_decay']
+        self.base_weight = conf['base_weight']
+
 
     def update_activity(self, pos, spikes, time):
 
@@ -62,6 +65,12 @@ class CA1_layer:
 
 
     def update_weights(self, update):
+
+        if self.weight_decay != 0:
+            
+            decay = self.SRM0_model.W - self.base_weight
+            decay = np.where(decay>0, decay, 0)
+            self.SRM0_model.W -= self.weight_decay*decay
 
         self.SRM0_model.W += update
 
@@ -101,7 +110,7 @@ class Action_layer:
 
         if self.weight_decay != 0:
             
-            decay = self.w_ca1 - self.base_weight
+            decay = self.neuron_model.W - self.base_weight
             decay = np.where(decay>0, decay, 0)
             self.neuron_model.W -= self.weight_decay*decay
 
