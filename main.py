@@ -32,20 +32,20 @@ def main():
     results = []
 
     if conf['num_agents']==1:
-        
+
         results.append(episode_run(0, conf))
 
     else:
 
         pool = multiprocessing.Pool(os.cpu_count() - 1)
 
-        for episode in range(0, conf['num_agents']):
+        for episode in range(conf['num_agents']):
 
             if conf['verbose']:
                 print('Episode',episode)
 
             results.append(pool.apply_async(episode_run,(episode, conf)))
-            
+
             current_process = psutil.Process()
             children = current_process.children(recursive=True)
 
@@ -77,7 +77,7 @@ def episode_run(episode, conf):
     #Results to be exported for each episode
     rewarding_trials = np.zeros(conf['num_trials'])
     rewarding_times  = np.zeros(conf['num_trials']) - 1
-    
+
     if conf['verbose']:
         print('Initiated episode:',episode)
 
@@ -119,10 +119,10 @@ def episode_run(episode, conf):
                      firing_rate_store_AC, firing_rate_store_CA1,
                      firing_rate_store_CA3, CA3, CA1, AC, environment)
         fig.show()
-          
-    
+
+
     ######################## START SIMULATION ######################################
-    
+
     t_episode = 0 # counter ms
 
     for trial in range(conf['num_trials']):
@@ -131,7 +131,7 @@ def episode_run(episode, conf):
 
         position = starting_position.copy()
         t_trial = 0
-        
+
         if conf['verbose']:
             print('Episode:', episode, 'Trial:', trial, flush=True)
 
@@ -152,7 +152,7 @@ def episode_run(episode, conf):
 
             ## CA3 Layer
             CA3.update_activity(position)
-            
+
             ## CA1 Layer
             CA1.update_activity(position, CA3.spikes, t_episode)
 
@@ -165,7 +165,7 @@ def episode_run(episode, conf):
             ## synaptic plasticity
             # BCM
             if CA1.alpha!=0. and conf['CA1']['plasticity_ON']:
-                
+
                 update = plasticity_CA1.get_update(CA3.firing_rates, CA1.firing_rates, 
                                                    use_sum=conf['CA1']['use_sum'], weights=CA1.SRM0_model.W)
                 CA1.update_weights(update)
@@ -175,16 +175,16 @@ def episode_run(episode, conf):
             ## position update
 
             position, wall_hit, reward_found = environment.update_position(position, a)
-                        
+
             if conf['AC']['Acetylcholine'] and wall_hit:
-                
+
                 AC.update_weights(plasticity_AC.release_ACh(CA1.firing_rates, AC.firing_rates))
 
             if reward_found:
 
                 rewarding_trials[trial] = 1
                 rewarding_times[trial] = t_trial
-                
+
                 if not ever_rewarded_flag:
 
                     ever_rewarded_flag = True
@@ -209,7 +209,7 @@ def episode_run(episode, conf):
 
         ## plot
         if conf['plot_flag']:
-            
+
             update_plots(fig,trial, store_pos, starting_position,
                          firing_rate_store_AC, firing_rate_store_CA1,
                          firing_rate_store_CA3, CA3, CA1, AC, environment)
@@ -221,16 +221,16 @@ def episode_run(episode, conf):
 
 
     if conf['save_weights']:
-        
+
         returns['weights'] = {'CA1': weights_store_CA1,
                               'AC' : weights_store_AC}
-    
+
     if conf['save_activity']:
 
         returns['activities'] = {'CA3': firing_rate_store_CA3,
                                  'CA1': firing_rate_store_CA1,
                                  'AC': firing_rate_store_AC}
-    
+
     return returns
      
 if __name__ == '__main__':

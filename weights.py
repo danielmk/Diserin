@@ -36,18 +36,16 @@ def lateral_weights_initialization(N_out, conf):
     option = conf['w_lateral_init']
 
     if option=='None':
-        
+
         return None
-    
+
     elif option=='standard':
 
         thetas = 2*np.pi*np.arange(1,N_out+1)*(1./N_out)
         diff_theta = thetas - thetas.reshape(-1,1)
         f = np.exp(conf['psi']*np.cos(diff_theta)) #lateral connectivity function
         np.fill_diagonal(f,0)
-        W = conf['w_minus']*(1./N_out) + conf['w_plus']*f/f.sum(axis=0) #lateral connectivity action neurons
-
-        return W
+        return conf['w_minus']*(1./N_out) + conf['w_plus']*f/f.sum(axis=0)
 
     else:
         print("Invalid option for weights initialization!")

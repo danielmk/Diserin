@@ -18,19 +18,19 @@ class BCM:
         x is the pre-synaptic activity
         y is the post-synaptic acitivity
         """
-    
+
         if use_sum:
-            
+
             assert weights is not None
-    
+
             y = np.einsum('ij,j->i',weights, x)
-        
+
         current_thetas = self.compute_thetas(y)
-        
+
         if self.thetas is None:
 
             self.thetas = current_thetas
-        
+
         else:
 
             self.thetas = self.memory_factor*self.thetas + (1-self.memory_factor)*current_thetas
@@ -40,7 +40,7 @@ class BCM:
         thetas = self.thetas.reshape(-1,1)
 
         dW = y*(y-thetas)*x 
-        
+
         return self.learning_rate*dW
 
     def compute_thetas(self, y):

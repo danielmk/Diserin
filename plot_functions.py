@@ -5,34 +5,30 @@ def make_firing_rates_plot(ax, rates):
 
     plot = ax.imshow(rates, origin='lower', cmap='Blues', interpolation='none',aspect='auto')
 
-    cb = ax.get_figure().colorbar(plot, ax=ax, format='%.1f')
-
-    return cb
+    return ax.get_figure().colorbar(plot, ax=ax, format='%.1f')
 
 
 def make_action_weights_plot(ax, weights, w_min, w_max):
 
-  N_out, N_in = weights.shape
+    N_out, N_in = weights.shape
 
-  num_images = int(np.sqrt(N_out))
-  image_side = int(np.sqrt(N_in))
+    num_images = int(np.sqrt(N_out))
+    image_side = int(np.sqrt(N_in))
 
-  subfig = ax.get_figure()
-  subplots = subfig.subplots(num_images, num_images)
+    subfig = ax.get_figure()
+    subplots = subfig.subplots(num_images, num_images)
 
-  for i, sp in enumerate(subplots.reshape(-1)):
+    for i, sp in enumerate(subplots.reshape(-1)):
 
-      sp.axis('off')
-      image = weights[i].reshape(-1, image_side)
-      im = sp.imshow(image, cmap = 'bwr', vmin=w_min, vmax=w_max, origin='lower')
+        sp.axis('off')
+        image = weights[i].reshape(-1, image_side)
+        im = sp.imshow(image, cmap = 'bwr', vmin=w_min, vmax=w_max, origin='lower')
 
-  fig = ax.get_figure()
-  fig.subplots_adjust(right=0.8)
+    fig = ax.get_figure()
+    fig.subplots_adjust(right=0.8)
 
-  cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-  cb = fig.colorbar(im, cax=cbar_ax)
-
-  return cb
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    return fig.colorbar(im, cax=cbar_ax)
 
 
 def compute_length(trajectory):
@@ -49,27 +45,25 @@ def compute_length(trajectory):
 
 def make_weights_plot(ax, weights, w_min, w_max):
 
-  N_out, N_in = weights.shape
+    N_out, N_in = weights.shape
 
-  num_images = int(np.sqrt(N_out))
-  image_side = int(np.sqrt(N_in))
+    num_images = int(np.sqrt(N_out))
+    image_side = int(np.sqrt(N_in))
 
-  subfig = ax.get_figure()
-  subplots = subfig.subplots(num_images, num_images)
+    subfig = ax.get_figure()
+    subplots = subfig.subplots(num_images, num_images)
 
-  for i, sp in enumerate(subplots.reshape(-1)):
+    for i, sp in enumerate(subplots.reshape(-1)):
 
-      sp.axis('off')
-      image = weights[i].reshape(-1, image_side)
-      im = sp.imshow(image, cmap = 'Blues', vmin=w_min, vmax=w_max, origin='lower')
+        sp.axis('off')
+        image = weights[i].reshape(-1, image_side)
+        im = sp.imshow(image, cmap = 'Blues', vmin=w_min, vmax=w_max, origin='lower')
 
-  fig = ax.get_figure()
-  fig.subplots_adjust(right=0.8)
+    fig = ax.get_figure()
+    fig.subplots_adjust(right=0.8)
 
-  cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
-  cb = fig.colorbar(im, cax=cbar_ax)
-
-  return cb
+    cbar_ax = fig.add_axes([0.85, 0.15, 0.05, 0.7])
+    return fig.colorbar(im, cax=cbar_ax)
 
  
 
@@ -149,10 +143,7 @@ def update_plots(fig, trial, store_pos, starting_position,
                  firing_rate_store_AC, firing_rate_store_CA1,
                  firing_rate_store_CA3, CA3, CA1, AC, ENV):
 
-    ax0, ax1, ax2, ax3, ax4, ax5, ax6 = fig.get_axes()[0:7]
-
-    colorbars = []
-
+    ax0, ax1, ax2, ax3, ax4, ax5, ax6 = fig.get_axes()[:7]
    #action_ticks = [4+4*i for i in range(9)]
     action_degree = [str(int(x)) for x in list(AC.thetas/(2*np.pi)*360)]
 
@@ -165,12 +156,12 @@ def update_plots(fig, trial, store_pos, starting_position,
     L = compute_length(trajectory)
 
     ax0.set_title('Trial {} (L={:.1f})'.format(trial, L))
-    
+
     if starting_position is not None:
         ax0.plot(starting_position[0],starting_position[1], marker='$\U0001F42D$', color='black', markersize=20) 
 
     F1 = ax0.plot(trajectory[:, 0], trajectory[:,1])
-    
+
     ####### POLICY #########
 
     if CA1.alpha == 0:
@@ -185,12 +176,13 @@ def update_plots(fig, trial, store_pos, starting_position,
         f4 = ax1.quiver(CA1.place_model.pc[:,0], CA1.place_model.pc[:,1], ac[0,:], ac[1,:])
     else:
         f4 = ax1.quiver(CA3.neuron_model.pc[:,0], CA3.neuron_model.pc[:,1], ac[0,:], ac[1,:])
-    
-    ####### FIRING RATES #################
 
-    colorbars.append(make_firing_rates_plot(ax4, firing_rate_store_AC[:,:,trial]))
-    colorbars.append(make_firing_rates_plot(ax3, firing_rate_store_CA1[:,:,trial]))
-    colorbars.append(make_firing_rates_plot(ax2, firing_rate_store_CA3[:,:,trial]))
+    colorbars = [
+        make_firing_rates_plot(ax4, firing_rate_store_AC[:, :, trial]),
+        make_firing_rates_plot(ax3, firing_rate_store_CA1[:, :, trial]),
+        make_firing_rates_plot(ax2, firing_rate_store_CA3[:, :, trial]),
+    ]
+
     fig = ax4.get_figure()
     fig.subplots_adjust(hspace=0.2)
 
@@ -198,11 +190,14 @@ def update_plots(fig, trial, store_pos, starting_position,
     ax4.set_yticklabels(action_degree)
 
 
-    ############# WEIGHTS #################
-
-    colorbars.append(make_weights_plot(ax5, CA1.SRM0_model.W, CA1.w_min, CA1.w_max))
-    colorbars.append(make_action_weights_plot(ax6, AC.neuron_model.W, AC.w_min, AC.w_max))
-
+    colorbars.extend(
+        (
+            make_weights_plot(ax5, CA1.SRM0_model.W, CA1.w_min, CA1.w_max),
+            make_action_weights_plot(
+                ax6, AC.neuron_model.W, AC.w_min, AC.w_max
+            ),
+        )
+    )
 
     #ax[1,2].set_yticks(ticks)
     #ax[1,2].set_yticklabels(action_degree)
