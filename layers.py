@@ -119,11 +119,11 @@ class Action_layer:
         self.neuron_model.W = np.clip(self.neuron_model.W, self.w_min, self.w_max)        
 
     def get_action(self,):
-        
+
         a = np.einsum('ij, j -> i', self.actions, self.firing_rates)
-        
+
         if self.fixed_step is not None:
-            
+
             return self.fixed_step * a / (np.linalg.norm(a)+ 1e-15)
 
         else:

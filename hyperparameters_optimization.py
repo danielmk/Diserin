@@ -20,14 +20,8 @@ def exploration_performance(results):
     """
 
     num_agents = len(results)
-    success = 0
-    
-    for result in results:
-        
-        if result['rewarding_trials'][:20].sum()>0:
+    success = sum(result['rewarding_trials'][:20].sum() > 0 for result in results)
 
-            success += 1
-    
     return 1 - success/num_agents
 
 def learning_performance(results):
@@ -45,22 +39,22 @@ def learning_performance(results):
 
 
 def objective(trial):
-    
-    
+
+
     conf['AC']['A_DA'] = trial.suggest_float('A_DA', 0.01, 0.5)
     conf['AC']['A_5HT'] = trial.suggest_float('A_5HT', 0.0001, 0.01)
     conf['AC']['A_ACh'] = trial.suggest_float('A_ACh', 0.001, 0.01)
     conf['AC']['w_max'] = trial.suggest_int('w_max_ac', 10, 100)
-    
+
 
     # Run all episodes
     pool = multiprocessing.Pool(os.cpu_count() - 1)
 
     results = []
-    for episode in range(0, conf['num_agents']):
+    for episode in range(conf['num_agents']):
 
         results.append(pool.apply_async(episode_run,(episode, conf)))
-        
+
         current_process = psutil.Process()
         children = current_process.children(recursive=True)
 
@@ -76,9 +70,7 @@ def objective(trial):
     # Compute average number of successive agents at the last trial
 
     obj1 = learning_performance(results)
-    obj2 = exploration_performance(results)
-
-    return obj2
+    return exploration_performance(results)
 
 
 study = optuna.create_study()

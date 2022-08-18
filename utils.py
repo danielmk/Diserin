@@ -31,7 +31,7 @@ def check_configuration(conf):
     rew_area = np.pi*rew_radius**2
 
     if 110<maze_area/rew_area<130:
-        
+
         print("Warning: the ratio between the maze and the reward areas is not standard, \
                according to Vorheels and Williams, 2006.")
 
